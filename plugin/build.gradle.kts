@@ -4,3 +4,15 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":nms"))
 }
+
+tasks.processResources {
+    val version = project.version.toString()
+    inputs.property("version", version)
+    filesMatching("paper-plugin.yml") {
+        expand("version" to version)
+    }
+}
+
+tasks.test {
+    systemProperty("basalt.version", project.version.toString())
+}

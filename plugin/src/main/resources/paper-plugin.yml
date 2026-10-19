@@ -1,0 +1,4 @@
+name: BasaltCore
+version: '${version}'
+main: tlm.dev.basalt.plugin.BasaltPlugin
+api-version: '1.21.11'

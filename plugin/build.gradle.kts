@@ -29,4 +29,9 @@ tasks.processResources {
 
 tasks.test {
     systemProperty("basalt.version", project.version.toString())
+    systemProperty("basalt.root", rootDir.absolutePath)
+    inputs.files(fileTree(rootDir) {
+        include("**/*.java", "**/*.kts", "**/*.yml", "**/*.yaml", "**/*.properties")
+        exclude("**/build/**", "**/.gradle/**", "**/.kotlin/**", ".git/**", ".idea/**", "run/**", "out/**")
+    }).withPropertyName("seamSources").withPathSensitivity(PathSensitivity.RELATIVE)
 }

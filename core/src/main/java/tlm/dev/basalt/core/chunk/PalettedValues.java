@@ -61,7 +61,7 @@ public final class PalettedValues {
             throw new MalformedChunkDataException("expected " + expectedLongs + " longs for " + writtenBits + " bits, got " + data.length);
         }
         PalettedValues values = new PalettedValues(format, writtenBits, palette.clone(), data.clone());
-        if (format.usesPalette(writtenBits)) {
+        if (writtenBits > 0 && format.usesPalette(writtenBits)) {
             for (int index = 0; index < format.entryCount(); index++) {
                 int paletteIndex = values.paletteIndex(index);
                 if (paletteIndex >= palette.length) {

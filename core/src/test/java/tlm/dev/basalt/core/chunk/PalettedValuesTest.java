@@ -26,6 +26,14 @@ class PalettedValuesTest {
     }
 
     @Test
+    void decodesASingleValueWithoutData() {
+        PalettedValues decoded = PalettedValues.decoded(BLOCKS, 0, new int[] {7}, new long[0]);
+
+        assertEquals(7, decoded.get(0));
+        assertEquals(7, decoded.get(4095));
+    }
+
+    @Test
     void keepsThePaletteInFirstSeenOrder() {
         int[] values = new int[4096];
         values[1] = 30;

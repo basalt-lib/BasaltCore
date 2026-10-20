@@ -17,6 +17,14 @@ public enum HeightmapType {
         return networkId;
     }
 
+    public boolean counts(int state, BlockStateTraits traits) {
+        return switch (this) {
+            case WORLD_SURFACE -> !traits.isAir(state);
+            case MOTION_BLOCKING -> traits.isMotionBlocking(state);
+            case MOTION_BLOCKING_NO_LEAVES -> traits.isMotionBlocking(state) && !traits.isLeaves(state);
+        };
+    }
+
     public static Optional<HeightmapType> byNetworkId(int networkId) {
         for (HeightmapType type : values()) {
             if (type.networkId == networkId) {

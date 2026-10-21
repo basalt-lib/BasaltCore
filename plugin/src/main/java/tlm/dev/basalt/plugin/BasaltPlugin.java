@@ -14,6 +14,7 @@ import tlm.dev.basalt.plugin.config.MessageSettings;
 import tlm.dev.basalt.plugin.facade.BasaltFacade;
 import tlm.dev.basalt.plugin.facade.ServiceRegistration;
 import tlm.dev.basalt.plugin.lifecycle.LifecycleManager;
+import tlm.dev.basalt.plugin.listener.FlyingKickListener;
 import tlm.dev.basalt.plugin.listener.PlayerJoinListener;
 import tlm.dev.basalt.plugin.listener.PlayerQuitListener;
 import tlm.dev.basalt.plugin.listener.ViewSessions;
@@ -30,11 +31,14 @@ public final class BasaltPlugin extends JavaPlugin {
         MessageSettings messages = new MessageFiles(this).load();
         ChunkViews views = MojangChunkViews.create(getServer());
         BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion());
+        FlyingKickListener flyingKicks = new FlyingKickListener(views, getLogger());
         lifecycle = new LifecycleManager(List.of(
                 new ServiceRegistration(getServer().getServicesManager(), this, basalt),
-                new ViewSessions(views, getServer(), getLogger())), getLogger());
+                new ViewSessions(views, getServer(), getLogger()),
+                flyingKicks), getLogger());
         lifecycle.enable();
         registerListeners(views);
+        getServer().getPluginManager().registerEvents(flyingKicks, this);
         DebugChunkCommand command = new DebugChunkCommand(views, getServer(), messages);
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> event.registrar().register(command.node()));
 

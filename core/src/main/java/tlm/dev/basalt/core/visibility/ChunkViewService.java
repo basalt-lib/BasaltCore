@@ -1,5 +1,6 @@
 package tlm.dev.basalt.core.visibility;
 
+import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.Optional;
@@ -22,7 +23,7 @@ public final class ChunkViewService<T> implements ChunkViews {
     }
 
     @Override
-    public ShowResult show(UUID player, ChunkKey chunk) {
+    public ShowResult show(UUID player, ChunkKey chunk, DebugPattern pattern) {
         Optional<PlayerView<T>> found = views.find(player);
         if (found.isEmpty()) {
             return ShowResult.NOT_TRACKED;
@@ -31,7 +32,7 @@ public final class ChunkViewService<T> implements ChunkViews {
         if (view.snapshot().isVirtual()) {
             return ShowResult.ALREADY_VIRTUAL;
         }
-        T payload = display.buildVirtual(player, chunk);
+        T payload = display.buildVirtual(player, chunk, pattern);
         view.enter(chunk, payload);
         if (display.hasChunk(player, chunk)) {
             display.sendVirtual(player, payload);

@@ -1,5 +1,6 @@
 package tlm.dev.basalt.core.visibility;
 
+import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ final class FakeDisplay implements ViewDisplay<String> {
     final List<String> events = new ArrayList<>();
     final Map<UUID, PlayerView<String>> attached = new HashMap<>();
     final Set<ChunkKey> clientChunks = new HashSet<>();
+    DebugPattern builtPattern;
 
     @Override
     public void attach(UUID player, PlayerView<String> view) {
@@ -34,8 +36,9 @@ final class FakeDisplay implements ViewDisplay<String> {
     }
 
     @Override
-    public String buildVirtual(UUID player, ChunkKey chunk) {
+    public String buildVirtual(UUID player, ChunkKey chunk, DebugPattern pattern) {
         events.add("build " + chunk.x() + " " + chunk.z());
+        builtPattern = pattern;
         return "V" + chunk.x() + chunk.z();
     }
 

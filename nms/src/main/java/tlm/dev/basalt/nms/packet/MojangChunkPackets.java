@@ -33,13 +33,13 @@ public final class MojangChunkPackets implements ChunkPackets {
     private static final MojangBlockStateTraits TRAITS = new MojangBlockStateTraits();
 
     @Override
-    public ClientboundLevelChunkWithLightPacket virtualChunk(Player player, ChunkKey chunk) {
+    public ClientboundLevelChunkWithLightPacket virtualChunk(Player player, ChunkKey chunk, DebugPattern pattern) {
         ServerLevel level = ((CraftPlayer) player).getHandle().level();
         Registry<Biome> biomes = level.registryAccess().lookupOrThrow(Registries.BIOME);
         ChunkFormats formats = ChunkFormats.of(Block.BLOCK_STATE_REGISTRY.size(), biomes.size());
         VirtualChunkBuilder builder = new VirtualChunkBuilder(
                 chunk, new ChunkShape(level.getMinY(), level.getSectionsCount()), Block.getId(Blocks.AIR.defaultBlockState()));
-        DebugChunkPattern.paint(DebugPattern.FLAT, builder, MojangChunkPackets::defaultStateId);
+        DebugChunkPattern.paint(pattern, builder, MojangChunkPackets::defaultStateId);
         VirtualChunk virtualChunk = builder.build(formats, TRAITS, biomes.getId(biomes.getValueOrThrow(Biomes.PLAINS)));
         RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(
                 Unpooled.wrappedBuffer(new ChunkPacketWriter(formats).write(virtualChunk)), level.registryAccess());

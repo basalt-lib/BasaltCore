@@ -4,6 +4,7 @@ import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import org.bukkit.Server;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
+import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.visibility.PlayerView;
 import tlm.dev.basalt.core.visibility.ViewDisplay;
@@ -43,8 +44,8 @@ public final class MojangViewDisplay implements ViewDisplay<ClientboundLevelChun
     }
 
     @Override
-    public ClientboundLevelChunkWithLightPacket buildVirtual(UUID player, ChunkKey chunk) {
-        return tools.packets().virtualChunk(online(player), chunk);
+    public ClientboundLevelChunkWithLightPacket buildVirtual(UUID player, ChunkKey chunk, DebugPattern pattern) {
+        return tools.packets().virtualChunk(online(player), chunk, pattern);
     }
 
     @Override

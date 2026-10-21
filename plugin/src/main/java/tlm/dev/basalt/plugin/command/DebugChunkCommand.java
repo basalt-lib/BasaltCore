@@ -11,6 +11,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Server;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.visibility.ChunkViews;
 import tlm.dev.basalt.core.visibility.ExitCause;
@@ -57,7 +58,7 @@ public final class DebugChunkCommand {
             return 0;
         }
         ChunkKey chunk = new ChunkKey(IntegerArgumentType.getInteger(context, CHUNK_X), IntegerArgumentType.getInteger(context, CHUNK_Z));
-        ShowResult result = views.show(player.getUniqueId(), chunk);
+        ShowResult result = views.show(player.getUniqueId(), chunk, DebugPattern.FLAT);
         MessageKey message = switch (result) {
             case SHOWN -> MessageKey.DEBUG_CHUNK_SHOWN;
             case ALREADY_VIRTUAL -> MessageKey.DEBUG_CHUNK_ALREADY_VIRTUAL;

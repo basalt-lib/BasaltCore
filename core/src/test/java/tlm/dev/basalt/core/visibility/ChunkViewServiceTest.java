@@ -2,6 +2,7 @@ package tlm.dev.basalt.core.visibility;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.List;
@@ -38,14 +39,21 @@ class ChunkViewServiceTest {
     void publishesTheVirtualViewBeforeSendingIt() {
         display.clientChunks.add(CHUNK);
 
-        assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK));
+        assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK, DebugPattern.FLAT));
         assertEquals(List.of("build 0 0", "send V00 while virtual"), display.events);
         assertEquals("V00", display.attached.get(PLAYER).snapshot().virtualPayload());
     }
 
     @Test
+    void buildsTheChosenPattern() {
+        service.show(PLAYER, CHUNK, DebugPattern.RAISED);
+
+        assertEquals(DebugPattern.RAISED, display.builtPattern);
+    }
+
+    @Test
     void waitsForTheServerWhenTheClientLacksTheChunk() {
-        assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK));
+        assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK, DebugPattern.FLAT));
 
         assertEquals(List.of("build 0 0"), display.events);
         assertTrue(display.attached.get(PLAYER).snapshot().hides(CHUNK));
@@ -53,24 +61,24 @@ class ChunkViewServiceTest {
 
     @Test
     void refusesASecondVirtualChunk() {
-        service.show(PLAYER, CHUNK);
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
         display.events.clear();
 
-        assertEquals(ShowResult.ALREADY_VIRTUAL, service.show(PLAYER, new ChunkKey(5, 5)));
+        assertEquals(ShowResult.ALREADY_VIRTUAL, service.show(PLAYER, new ChunkKey(5, 5), DebugPattern.FLAT));
         assertEquals(List.of(), display.events);
         assertTrue(display.attached.get(PLAYER).snapshot().hides(CHUNK));
     }
 
     @Test
     void refusesAnUntrackedPlayer() {
-        assertEquals(ShowResult.NOT_TRACKED, service.show(OTHER, CHUNK));
+        assertEquals(ShowResult.NOT_TRACKED, service.show(OTHER, CHUNK, DebugPattern.FLAT));
         assertEquals(List.of(), display.events);
     }
 
     @Test
     void publishesTheRealViewBeforeResendingTheChunk() {
         display.clientChunks.add(CHUNK);
-        service.show(PLAYER, CHUNK);
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
         display.events.clear();
 
         assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.COMMAND));
@@ -80,7 +88,7 @@ class ChunkViewServiceTest {
 
     @Test
     void resendsNothingWhenTheClientNoLongerHasTheChunk() {
-        service.show(PLAYER, CHUNK);
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
         display.events.clear();
 
         assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.COMMAND));
@@ -90,23 +98,23 @@ class ChunkViewServiceTest {
     @Test
     void forgetsADisconnectedPlayerWithoutResending() {
         display.clientChunks.add(CHUNK);
-        service.show(PLAYER, CHUNK);
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
         display.events.clear();
 
         assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.DISCONNECT));
         assertEquals(List.of("detach"), display.events);
-        assertEquals(ShowResult.NOT_TRACKED, service.show(PLAYER, CHUNK));
+        assertEquals(ShowResult.NOT_TRACKED, service.show(PLAYER, CHUNK, DebugPattern.FLAT));
     }
 
     @Test
     void keepsTrackingAfterAWorldChangeWithoutResending() {
         display.clientChunks.add(CHUNK);
-        service.show(PLAYER, CHUNK);
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
         display.events.clear();
 
         assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.WORLD_CHANGE));
         assertEquals(List.of(), display.events);
-        assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK));
+        assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK, DebugPattern.FLAT));
     }
 
     @Test
@@ -120,7 +128,7 @@ class ChunkViewServiceTest {
     void restoresEveryVirtualViewAtShutdown() {
         service.track(OTHER);
         display.clientChunks.add(CHUNK);
-        service.show(PLAYER, CHUNK);
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
         display.events.clear();
 
         assertEquals(1, service.hideAll(ExitCause.SHUTDOWN));

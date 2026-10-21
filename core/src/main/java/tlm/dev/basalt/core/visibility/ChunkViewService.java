@@ -57,6 +57,11 @@ public final class ChunkViewService<T> implements ChunkViews {
     }
 
     @Override
+    public Optional<ChunkKey> virtualChunk(UUID player) {
+        return views.find(player).map(PlayerView::snapshot).map(ViewSnapshot::virtualChunk);
+    }
+
+    @Override
     public int hideAll(ExitCause cause) {
         int restored = 0;
         for (UUID player : views.players()) {

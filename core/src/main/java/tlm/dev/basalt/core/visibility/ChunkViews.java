@@ -3,6 +3,7 @@ package tlm.dev.basalt.core.visibility;
 import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ChunkViews {
@@ -14,4 +15,6 @@ public interface ChunkViews {
     HideResult hide(UUID player, ExitCause cause);
 
     int hideAll(ExitCause cause);
+
+    Optional<ChunkKey> virtualChunk(UUID player);
 }

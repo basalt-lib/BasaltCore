@@ -6,6 +6,7 @@ import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,6 +43,18 @@ class ChunkViewServiceTest {
         assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK, DebugPattern.FLAT));
         assertEquals(List.of("build 0 0", "send V00 while virtual"), display.events);
         assertEquals("V00", display.attached.get(PLAYER).snapshot().virtualPayload());
+    }
+
+    @Test
+    void namesTheVirtualChunkOfAPlayer() {
+        assertEquals(Optional.empty(), service.virtualChunk(PLAYER));
+        assertEquals(Optional.empty(), service.virtualChunk(OTHER));
+
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
+
+        assertEquals(Optional.of(CHUNK), service.virtualChunk(PLAYER));
+        service.hide(PLAYER, ExitCause.COMMAND);
+        assertEquals(Optional.empty(), service.virtualChunk(PLAYER));
     }
 
     @Test

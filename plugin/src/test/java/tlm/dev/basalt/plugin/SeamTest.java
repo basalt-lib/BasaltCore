@@ -36,7 +36,7 @@ class SeamTest {
             "plugin", Set.of("command", "facade", "listener"));
     private static final Map<String, Set<String>> PLUMBING = Map.of(
             "api", Set.of(""),
-            "core", Set.of("platform", "position"),
+            "core", Set.of("debug", "platform", "position"),
             "nms", Set.of("", "platform", "port"),
             "plugin", Set.of("", "config", "lifecycle"));
     private static final Set<String> COMPOSITION_ROOTS = Set.of("nms", "plugin");

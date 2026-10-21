@@ -1,6 +1,7 @@
 package tlm.dev.basalt.core.chunk;
 
 import org.junit.jupiter.api.Test;
+import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.Arrays;
@@ -78,7 +79,7 @@ class ChunkPacketWriterTest {
 
     private static VirtualChunk debugChunk(ChunkKey key, ChunkShape shape) {
         VirtualChunkBuilder builder = new VirtualChunkBuilder(key, shape, TestBlocks.AIR);
-        DebugChunkPattern.paint(builder, block -> TestBlocks.STONE);
+        DebugChunkPattern.paint(DebugPattern.FLAT, builder, block -> TestBlocks.STONE);
         return builder.build(TestBlocks.FORMATS, new TestBlocks(), TestBlocks.PLAINS);
     }
 

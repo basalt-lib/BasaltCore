@@ -22,6 +22,7 @@ import tlm.dev.basalt.core.chunk.ChunkShape;
 import tlm.dev.basalt.core.chunk.DebugChunkPattern;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.chunk.VirtualChunkBuilder;
+import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.nms.port.ChunkPackets;
 
@@ -38,7 +39,7 @@ public final class MojangChunkPackets implements ChunkPackets {
         ChunkFormats formats = ChunkFormats.of(Block.BLOCK_STATE_REGISTRY.size(), biomes.size());
         VirtualChunkBuilder builder = new VirtualChunkBuilder(
                 chunk, new ChunkShape(level.getMinY(), level.getSectionsCount()), Block.getId(Blocks.AIR.defaultBlockState()));
-        DebugChunkPattern.paint(builder, MojangChunkPackets::defaultStateId);
+        DebugChunkPattern.paint(DebugPattern.FLAT, builder, MojangChunkPackets::defaultStateId);
         VirtualChunk virtualChunk = builder.build(formats, TRAITS, biomes.getId(biomes.getValueOrThrow(Biomes.PLAINS)));
         RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(
                 Unpooled.wrappedBuffer(new ChunkPacketWriter(formats).write(virtualChunk)), level.registryAccess());

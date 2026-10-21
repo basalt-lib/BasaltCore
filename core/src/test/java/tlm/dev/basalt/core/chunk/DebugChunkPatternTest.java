@@ -1,6 +1,7 @@
 package tlm.dev.basalt.core.chunk;
 
 import org.junit.jupiter.api.Test;
+import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.Map;
@@ -80,9 +81,48 @@ class DebugChunkPatternTest {
         assertEquals(1087, chunk.nonAirCount());
     }
 
+    @Test
+    void raisesA313BlockPlatformTenBlocksAboveTheBottom() {
+        VirtualChunk chunk = paint(DebugPattern.RAISED, TestBlocks.OVERWORLD);
+
+        assertEquals(313, chunk.sections().get(0).nonAirCount());
+        assertEquals(313, chunk.nonAirCount());
+        assertEquals(27000, chunk.stateAt(0, -54, 0));
+        assertEquals(27000, chunk.stateAt(15, -54, 15));
+        assertEquals(TestBlocks.AIR, chunk.stateAt(5, -55, 5));
+        assertEquals(TestBlocks.AIR, chunk.stateAt(5, -64, 5));
+    }
+
+    @Test
+    void leavesAFourBlockOpeningInTheRaisedRim() {
+        VirtualChunk chunk = paint(DebugPattern.RAISED, TestBlocks.OVERWORLD);
+
+        assertEquals(2104, chunk.stateAt(0, -53, 0));
+        assertEquals(2104, chunk.stateAt(15, -53, 5));
+        assertEquals(2104, chunk.stateAt(15, -53, 10));
+        for (int z = 6; z <= 9; z++) {
+            assertEquals(TestBlocks.AIR, chunk.stateAt(15, -53, z));
+        }
+        assertEquals(4775, chunk.stateAt(8, -53, 8));
+        assertEquals(TestBlocks.AIR, chunk.stateAt(8, -52, 8));
+    }
+
+    @Test
+    void givesTheRaisedHeightmapsAboveThePlatform() {
+        Map<HeightmapType, int[]> heights = paint(DebugPattern.RAISED, TestBlocks.OVERWORLD).heights();
+
+        assertEquals(11, heights.get(HeightmapType.MOTION_BLOCKING)[HeightmapCodec.column(5, 5)]);
+        assertEquals(12, heights.get(HeightmapType.MOTION_BLOCKING)[HeightmapCodec.column(0, 3)]);
+        assertEquals(11, heights.get(HeightmapType.MOTION_BLOCKING)[HeightmapCodec.column(15, 7)]);
+    }
+
     private static VirtualChunk paint(ChunkShape shape) {
+        return paint(DebugPattern.FLAT, shape);
+    }
+
+    private static VirtualChunk paint(DebugPattern pattern, ChunkShape shape) {
         VirtualChunkBuilder builder = new VirtualChunkBuilder(new ChunkKey(0, 0), shape, TestBlocks.AIR);
-        DebugChunkPattern.paint(builder, STATES::get);
+        DebugChunkPattern.paint(pattern, builder, STATES::get);
         return builder.build(TestBlocks.FORMATS, new TestBlocks(), TestBlocks.PLAINS);
     }
 }

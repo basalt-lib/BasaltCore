@@ -81,7 +81,7 @@ public final class VirtualChunkBuilder {
                 continue;
             }
             for (int localY = 15; localY >= 0; localY--) {
-                if (type.counts(states[ChunkSection.blockIndex(x, localY, z)], traits)) {
+                if (traits.countsIn(type, states[ChunkSection.blockIndex(x, localY, z)])) {
                     return sectionIndex * 16 + localY + 1;
                 }
             }

@@ -16,12 +16,12 @@ final class TestBlocks implements BlockStateTraits {
     }
 
     @Override
-    public boolean isMotionBlocking(int state) {
-        return state != AIR && state != FLOWER;
-    }
-
-    @Override
-    public boolean isLeaves(int state) {
-        return state == LEAVES;
+    public boolean countsIn(HeightmapType type, int state) {
+        boolean motionBlocking = state != AIR && state != FLOWER;
+        return switch (type) {
+            case WORLD_SURFACE -> state != AIR;
+            case MOTION_BLOCKING -> motionBlocking;
+            case MOTION_BLOCKING_NO_LEAVES -> motionBlocking && state != LEAVES;
+        };
     }
 }

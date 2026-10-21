@@ -4,7 +4,5 @@ public interface BlockStateTraits {
 
     boolean isAir(int state);
 
-    boolean isMotionBlocking(int state);
-
-    boolean isLeaves(int state);
+    boolean countsIn(HeightmapType type, int state);
 }

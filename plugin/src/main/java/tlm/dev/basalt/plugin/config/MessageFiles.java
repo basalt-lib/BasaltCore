@@ -25,6 +25,9 @@ public final class MessageFiles {
 
     public MessageSettings load() {
         File file = new File(plugin.getDataFolder(), FILE_NAME);
+        if (!file.exists()) {
+            plugin.saveResource(FILE_NAME, false);
+        }
         YamlConfiguration server = serverFile(file);
         YamlConfiguration shipped = shippedFile();
         Map<MessageKey, String> templates = new EnumMap<>(MessageKey.class);

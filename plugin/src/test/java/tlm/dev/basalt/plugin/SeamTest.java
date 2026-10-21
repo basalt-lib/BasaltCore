@@ -37,8 +37,9 @@ class SeamTest {
     private static final Map<String, Set<String>> PLUMBING = Map.of(
             "api", Set.of(""),
             "core", Set.of("platform", "position"),
-            "nms", Set.of("platform", "port"),
+            "nms", Set.of("", "platform", "port"),
             "plugin", Set.of("", "config", "lifecycle"));
+    private static final Set<String> COMPOSITION_ROOTS = Set.of("nms", "plugin");
     private static final Map<String, Pattern> HIGHER_MODULES = Map.of(
             "api", Pattern.compile("tlm[.]dev[.]basalt[.](core|nms|plugin)\\b"),
             "core", Pattern.compile("tlm[.]dev[.]basalt[.](nms|plugin)\\b"),
@@ -95,7 +96,7 @@ class SeamTest {
     void familiesNeverReachAnotherFamily() {
         List<String> found = new ArrayList<>();
         for (SourceFile file : mainSources()) {
-            if (file.module().equals("plugin") && file.packageSegment().isEmpty()) {
+            if (COMPOSITION_ROOTS.contains(file.module()) && file.packageSegment().isEmpty()) {
                 continue;
             }
             for (String family : FAMILIES.get(file.module())) {

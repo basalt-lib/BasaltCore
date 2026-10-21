@@ -36,6 +36,11 @@ class PluginDescriptorTest {
         assertEquals("1.21.11", value("api-version"));
     }
 
+    @Test
+    void grantsTheAdminPermissionToOperators() throws IOException {
+        assertTrue(descriptor().contains("permissions:\n  basalt.admin:\n    default: op\n"), "basalt.admin must default to op");
+    }
+
     private String value(String key) throws IOException {
         Matcher matcher = Pattern.compile("(?m)^" + Pattern.quote(key) + ":\\s*'?([^'\\r\\n]*)'?\\s*$").matcher(descriptor());
         assertTrue(matcher.find(), key + " is missing from paper-plugin.yml");
@@ -45,7 +50,7 @@ class PluginDescriptorTest {
     private String descriptor() throws IOException {
         try (InputStream input = getClass().getResourceAsStream("/paper-plugin.yml")) {
             assertNotNull(input, "paper-plugin.yml is missing");
-            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8).replace("\r\n", "\n");
         }
     }
 }

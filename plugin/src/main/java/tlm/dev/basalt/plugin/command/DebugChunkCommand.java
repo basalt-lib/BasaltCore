@@ -3,6 +3,7 @@ package tlm.dev.basalt.plugin.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -46,19 +47,27 @@ public final class DebugChunkCommand {
                                 .then(Commands.argument(PLAYER, StringArgumentType.word())
                                         .then(Commands.literal("on")
                                                 .then(Commands.argument(CHUNK_X, coordinate())
-                                                        .then(Commands.argument(CHUNK_Z, coordinate()).executes(this::show))))
+                                                        .then(patterns(Commands.argument(CHUNK_Z, coordinate())))))
                                         .then(Commands.literal("off").executes(this::hide)))))
                 .build();
     }
 
-    private int show(CommandContext<CommandSourceStack> context) {
+    private RequiredArgumentBuilder<CommandSourceStack, Integer> patterns(RequiredArgumentBuilder<CommandSourceStack, Integer> chunkZ) {
+        chunkZ.executes(context -> show(context, DebugPattern.FLAT));
+        for (DebugPattern pattern : DebugPattern.values()) {
+            chunkZ.then(Commands.literal(pattern.label()).executes(context -> show(context, pattern)));
+        }
+        return chunkZ;
+    }
+
+    private int show(CommandContext<CommandSourceStack> context, DebugPattern pattern) {
         CommandSender sender = context.getSource().getSender();
         Player player = onlinePlayer(context);
         if (player == null) {
             return 0;
         }
         ChunkKey chunk = new ChunkKey(IntegerArgumentType.getInteger(context, CHUNK_X), IntegerArgumentType.getInteger(context, CHUNK_Z));
-        ShowResult result = views.show(player.getUniqueId(), chunk, DebugPattern.FLAT);
+        ShowResult result = views.show(player.getUniqueId(), chunk, pattern);
         MessageKey message = switch (result) {
             case SHOWN -> MessageKey.DEBUG_CHUNK_SHOWN;
             case ALREADY_VIRTUAL -> MessageKey.DEBUG_CHUNK_ALREADY_VIRTUAL;
@@ -67,7 +76,8 @@ public final class DebugChunkCommand {
         sender.sendMessage(messages.render(message,
                 Placeholder.unparsed(PLAYER, player.getName()),
                 Placeholder.unparsed("x", Integer.toString(chunk.x())),
-                Placeholder.unparsed("z", Integer.toString(chunk.z()))));
+                Placeholder.unparsed("z", Integer.toString(chunk.z())),
+                Placeholder.unparsed("pattern", pattern.label())));
         return result == ShowResult.SHOWN ? Command.SINGLE_SUCCESS : 0;
     }
 

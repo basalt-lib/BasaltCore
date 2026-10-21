@@ -1,4 +1,4 @@
-debug-chunk-shown: "<green><player> now sees a virtual chunk at <x> <z>."
+debug-chunk-shown: "<green><player> now sees the <pattern> virtual chunk at <x> <z>."
 debug-chunk-restored: "<green><player> sees the real world again."
 debug-chunk-already-virtual: "<red><player> already sees a virtual chunk."
 debug-chunk-not-virtual: "<red><player> already sees the real world."

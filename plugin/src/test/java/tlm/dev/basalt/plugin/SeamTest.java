@@ -27,7 +27,18 @@ class SeamTest {
     private static final String API_SOURCES = "api/src/main/java/";
 
     private static final Pattern MOJANG = Pattern.compile("net[.]minecraft[.]|org[.]bukkit[.]craftbukkit[.]|com[.]mojang[.]");
+    private static final Pattern MOJANG_BUT_BRIGADIER = Pattern.compile("net[.]minecraft[.]|org[.]bukkit[.]craftbukkit[.]|com[.]mojang[.](?!brigadier[.])");
     private static final Pattern BUKKIT = Pattern.compile("org[.]bukkit\\b");
+    private static final Map<String, Set<String>> FAMILIES = Map.of(
+            "api", Set.of(),
+            "core", Set.of("chunk", "visibility"),
+            "nms", Set.of("channel", "packet", "view"),
+            "plugin", Set.of("command", "facade", "listener"));
+    private static final Map<String, Set<String>> PLUMBING = Map.of(
+            "api", Set.of(""),
+            "core", Set.of("platform", "position"),
+            "nms", Set.of("platform", "port"),
+            "plugin", Set.of("", "config", "lifecycle"));
     private static final Map<String, Pattern> HIGHER_MODULES = Map.of(
             "api", Pattern.compile("tlm[.]dev[.]basalt[.](core|nms|plugin)\\b"),
             "core", Pattern.compile("tlm[.]dev[.]basalt[.](nms|plugin)\\b"),
@@ -60,9 +71,42 @@ class SeamTest {
 
     @Test
     void mojangClassesStayInNms() {
-        List<String> found = occurrences(files.stream().filter(file -> !file.module().equals("nms")), MOJANG);
+        List<String> found = new ArrayList<>();
+        found.addAll(occurrences(files.stream().filter(file -> !file.module().equals("nms") && !file.module().equals("plugin")), MOJANG));
+        found.addAll(occurrences(files.stream().filter(file -> file.module().equals("plugin")), MOJANG_BUT_BRIGADIER));
 
-        assertEquals(List.of(), found, "Mojang or CraftBukkit classes outside nms");
+        assertEquals(List.of(), found, "Mojang or CraftBukkit classes outside nms, Brigadier aside in plugin");
+    }
+
+    @Test
+    void everyPackageIsAFamilyOrPlumbing() {
+        List<String> found = new ArrayList<>();
+        for (SourceFile file : mainSources()) {
+            String segment = file.packageSegment();
+            if (!FAMILIES.get(file.module()).contains(segment) && !PLUMBING.get(file.module()).contains(segment)) {
+                found.add(file.path() + " in undeclared package '" + segment + "'");
+            }
+        }
+
+        assertEquals(List.of(), found, "packages that are neither a family nor plumbing");
+    }
+
+    @Test
+    void familiesNeverReachAnotherFamily() {
+        List<String> found = new ArrayList<>();
+        for (SourceFile file : mainSources()) {
+            if (file.module().equals("plugin") && file.packageSegment().isEmpty()) {
+                continue;
+            }
+            for (String family : FAMILIES.get(file.module())) {
+                if (!family.equals(file.packageSegment())) {
+                    Pattern otherFamily = Pattern.compile("tlm[.]dev[.]basalt[.]" + file.module() + "[.]" + family + "\\b");
+                    found.addAll(occurrences(Stream.of(file), otherFamily));
+                }
+            }
+        }
+
+        assertEquals(List.of(), found, "a family or plumbing package reaching a family of its module");
     }
 
     @Test
@@ -127,6 +171,10 @@ class SeamTest {
         return SCANNED_EXTENSIONS.stream().anyMatch(name::endsWith);
     }
 
+    private static List<SourceFile> mainSources() {
+        return files.stream().filter(file -> file.path().startsWith(file.module() + "/src/main/java/") && file.isJava()).toList();
+    }
+
     private static List<String> occurrences(Stream<SourceFile> scanned, Pattern pattern) {
         List<String> found = new ArrayList<>();
         scanned.forEach(file -> {
@@ -152,6 +200,16 @@ class SeamTest {
 
         boolean isJava() {
             return path.endsWith(".java");
+        }
+
+        String packageSegment() {
+            String modulePackage = module + "/src/main/java/tlm/dev/basalt/" + module + "/";
+            if (!path.startsWith(modulePackage)) {
+                return "?";
+            }
+            String rest = path.substring(modulePackage.length());
+            int slash = rest.indexOf('/');
+            return slash < 0 ? "" : rest.substring(0, slash);
         }
 
         int lineOf(int offset) {

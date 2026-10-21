@@ -1,0 +1,132 @@
+package tlm.dev.basalt.core.visibility;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import tlm.dev.basalt.core.position.ChunkKey;
+
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class ChunkViewServiceTest {
+
+    private static final UUID PLAYER = UUID.fromString("00000000-0000-0000-0000-00000000000a");
+    private static final UUID OTHER = UUID.fromString("00000000-0000-0000-0000-00000000000b");
+    private static final ChunkKey CHUNK = new ChunkKey(0, 0);
+
+    private final FakeDisplay display = new FakeDisplay();
+    private final ChunkViewService<String> service = new ChunkViewService<>(display);
+
+    @BeforeEach
+    void trackThePlayer() {
+        service.track(PLAYER);
+        display.events.clear();
+    }
+
+    @Test
+    void attachesATrackedPlayerOnce() {
+        service.track(PLAYER);
+        service.track(OTHER);
+
+        assertEquals(List.of("attach"), display.events);
+    }
+
+    @Test
+    void publishesTheVirtualViewBeforeSendingIt() {
+        display.clientChunks.add(CHUNK);
+
+        assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK));
+        assertEquals(List.of("build 0 0", "send V00 while virtual"), display.events);
+        assertEquals("V00", display.attached.get(PLAYER).snapshot().virtualPayload());
+    }
+
+    @Test
+    void waitsForTheServerWhenTheClientLacksTheChunk() {
+        assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK));
+
+        assertEquals(List.of("build 0 0"), display.events);
+        assertTrue(display.attached.get(PLAYER).snapshot().hides(CHUNK));
+    }
+
+    @Test
+    void refusesASecondVirtualChunk() {
+        service.show(PLAYER, CHUNK);
+        display.events.clear();
+
+        assertEquals(ShowResult.ALREADY_VIRTUAL, service.show(PLAYER, new ChunkKey(5, 5)));
+        assertEquals(List.of(), display.events);
+        assertTrue(display.attached.get(PLAYER).snapshot().hides(CHUNK));
+    }
+
+    @Test
+    void refusesAnUntrackedPlayer() {
+        assertEquals(ShowResult.NOT_TRACKED, service.show(OTHER, CHUNK));
+        assertEquals(List.of(), display.events);
+    }
+
+    @Test
+    void publishesTheRealViewBeforeResendingTheChunk() {
+        display.clientChunks.add(CHUNK);
+        service.show(PLAYER, CHUNK);
+        display.events.clear();
+
+        assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.COMMAND));
+        assertEquals(List.of("resend 0 0 while real"), display.events);
+        assertFalse(display.attached.get(PLAYER).snapshot().isVirtual());
+    }
+
+    @Test
+    void resendsNothingWhenTheClientNoLongerHasTheChunk() {
+        service.show(PLAYER, CHUNK);
+        display.events.clear();
+
+        assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.COMMAND));
+        assertEquals(List.of(), display.events);
+    }
+
+    @Test
+    void forgetsADisconnectedPlayerWithoutResending() {
+        display.clientChunks.add(CHUNK);
+        service.show(PLAYER, CHUNK);
+        display.events.clear();
+
+        assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.DISCONNECT));
+        assertEquals(List.of("detach"), display.events);
+        assertEquals(ShowResult.NOT_TRACKED, service.show(PLAYER, CHUNK));
+    }
+
+    @Test
+    void keepsTrackingAfterAWorldChangeWithoutResending() {
+        display.clientChunks.add(CHUNK);
+        service.show(PLAYER, CHUNK);
+        display.events.clear();
+
+        assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.WORLD_CHANGE));
+        assertEquals(List.of(), display.events);
+        assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK));
+    }
+
+    @Test
+    void reportsARealPlayerAsNotVirtual() {
+        assertEquals(HideResult.NOT_VIRTUAL, service.hide(PLAYER, ExitCause.COMMAND));
+        assertEquals(HideResult.NOT_VIRTUAL, service.hide(OTHER, ExitCause.COMMAND));
+        assertEquals(List.of(), display.events);
+    }
+
+    @Test
+    void restoresEveryVirtualViewAtShutdown() {
+        service.track(OTHER);
+        display.clientChunks.add(CHUNK);
+        service.show(PLAYER, CHUNK);
+        display.events.clear();
+
+        assertEquals(1, service.hideAll(ExitCause.SHUTDOWN));
+        assertTrue(display.events.contains("resend 0 0 while real"));
+        assertEquals(2, display.events.stream().filter("detach"::equals).count());
+        assertTrue(display.attached.isEmpty());
+        assertEquals(0, service.hideAll(ExitCause.SHUTDOWN));
+    }
+}

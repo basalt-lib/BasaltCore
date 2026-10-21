@@ -59,6 +59,14 @@ public final class MojangViewDisplay implements ViewDisplay<ClientboundLevelChun
         tools.packets().realChunk(online, chunk).ifPresent(packet -> ((CraftPlayer) online).getHandle().connection.send(packet));
     }
 
+    @Override
+    public void restartFlyingCheck(UUID player) {
+        Player online = server.getPlayer(player);
+        if (online != null) {
+            ((CraftPlayer) online).getHandle().connection.resetFlyingTicks();
+        }
+    }
+
     private Player online(UUID player) {
         Player online = server.getPlayer(player);
         if (online == null) {

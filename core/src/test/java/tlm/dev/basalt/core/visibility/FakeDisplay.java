@@ -52,6 +52,11 @@ final class FakeDisplay implements ViewDisplay<String> {
         events.add("resend " + chunk.x() + " " + chunk.z() + " while " + state(player));
     }
 
+    @Override
+    public void restartFlyingCheck(UUID player) {
+        events.add("restart flying check while " + state(player));
+    }
+
     private String state(UUID player) {
         PlayerView<String> view = attached.get(player);
         return view == null ? "detached" : view.snapshot().isVirtual() ? "virtual" : "real";

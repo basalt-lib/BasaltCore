@@ -18,4 +18,6 @@ public interface ViewDisplay<T> {
     void sendVirtual(UUID player, T payload);
 
     void resendReal(UUID player, ChunkKey chunk);
+
+    void restartFlyingCheck(UUID player);
 }

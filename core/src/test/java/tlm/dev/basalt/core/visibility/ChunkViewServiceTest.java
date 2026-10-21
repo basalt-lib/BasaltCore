@@ -95,7 +95,7 @@ class ChunkViewServiceTest {
         display.events.clear();
 
         assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.COMMAND));
-        assertEquals(List.of("resend 0 0 while real"), display.events);
+        assertEquals(List.of("restart flying check while real", "resend 0 0 while real"), display.events);
         assertFalse(display.attached.get(PLAYER).snapshot().isVirtual());
     }
 
@@ -105,7 +105,7 @@ class ChunkViewServiceTest {
         display.events.clear();
 
         assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.COMMAND));
-        assertEquals(List.of(), display.events);
+        assertEquals(List.of("restart flying check while real"), display.events);
     }
 
     @Test
@@ -115,7 +115,7 @@ class ChunkViewServiceTest {
         display.events.clear();
 
         assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.DISCONNECT));
-        assertEquals(List.of("detach"), display.events);
+        assertEquals(List.of("restart flying check while real", "detach"), display.events);
         assertEquals(ShowResult.NOT_TRACKED, service.show(PLAYER, CHUNK, DebugPattern.FLAT));
     }
 
@@ -126,8 +126,21 @@ class ChunkViewServiceTest {
         display.events.clear();
 
         assertEquals(HideResult.RESTORED, service.hide(PLAYER, ExitCause.WORLD_CHANGE));
-        assertEquals(List.of(), display.events);
+        assertEquals(List.of("restart flying check while real"), display.events);
         assertEquals(ShowResult.SHOWN, service.show(PLAYER, CHUNK, DebugPattern.FLAT));
+    }
+
+    @Test
+    void restartsTheFlyingCheckWhateverTheExit() {
+        for (ExitCause cause : ExitCause.values()) {
+            service.track(PLAYER);
+            service.show(PLAYER, CHUNK, DebugPattern.FLAT);
+            display.events.clear();
+
+            service.hide(PLAYER, cause);
+
+            assertEquals("restart flying check while real", display.events.getFirst(), cause.name());
+        }
     }
 
     @Test

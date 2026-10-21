@@ -47,6 +47,7 @@ public final class ChunkViewService<T> implements ChunkViews {
             return HideResult.NOT_VIRTUAL;
         }
         Optional<ChunkKey> left = found.get().exit();
+        left.ifPresent(chunk -> display.restartFlyingCheck(player));
         left.filter(chunk -> cause.clientKeepsChunks() && display.hasChunk(player, chunk))
                 .ifPresent(chunk -> display.resendReal(player, chunk));
         if (cause.endsTracking()) {

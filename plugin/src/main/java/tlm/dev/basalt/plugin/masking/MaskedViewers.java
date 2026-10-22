@@ -62,7 +62,8 @@ public final class MaskedViewers implements ViewChanges {
 
     public boolean hidesOnTrack(Player player, Entity entity) {
         Viewer viewer = viewers.get(player.getUniqueId());
-        if (viewer == null || !EntityMasking.hides(player.getUniqueId(), Optional.of(viewer.chunk), real(entity))) {
+        if (viewer == null || rides(player, entity)
+                || !EntityMasking.hides(player.getUniqueId(), Optional.of(viewer.chunk), real(entity))) {
             return false;
         }
         player.hideEntity(plugin, entity);
@@ -90,6 +91,7 @@ public final class MaskedViewers implements ViewChanges {
             return 0;
         }
         Map<UUID, Entity> nearby = nearby(player.getWorld(), viewer.chunk);
+        nearby.values().removeIf(entity -> rides(player, entity));
         viewer.hidden.removeIf(entity -> nearby.containsKey(entity) && player.canSee(nearby.get(entity)));
         List<RealEntity> entities = new ArrayList<>(nearby.size());
         nearby.values().forEach(entity -> entities.add(real(entity)));
@@ -129,17 +131,21 @@ public final class MaskedViewers implements ViewChanges {
     }
 
     private static Map<UUID, Entity> nearby(World world, ChunkKey chunk) {
+        Map<UUID, Entity> found = new HashMap<>();
         if (!world.isChunkLoaded(chunk.x(), chunk.z())) {
-            return Map.of();
+            return found;
         }
         double x = chunk.x() * 16.0;
         double z = chunk.z() * 16.0;
         BoundingBox box = new BoundingBox(x, world.getMinHeight(), z, x + 16, world.getMaxHeight(), z + 16);
-        Map<UUID, Entity> found = new HashMap<>();
         for (Entity entity : world.getNearbyEntities(box)) {
             found.put(entity.getUniqueId(), entity);
         }
         return found;
+    }
+
+    private static boolean rides(Player player, Entity entity) {
+        return entity.equals(player.getVehicle()) || player.equals(entity.getVehicle());
     }
 
     private static RealEntity real(Entity entity) {

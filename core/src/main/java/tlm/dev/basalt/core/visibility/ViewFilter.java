@@ -14,7 +14,8 @@ public final class ViewFilter {
         }
         return switch (facts.kind()) {
             case CHUNK -> Verdict.REPLACE_WITH_VIRTUAL;
-            case BLOCK, SECTION, BLOCK_ENTITY, LIGHT, BIOMES -> Verdict.DROP;
+            case BLOCK, SECTION, BLOCK_ENTITY, LIGHT, BIOMES,
+                 SOUND, PARTICLES, LEVEL_EVENT, BLOCK_EVENT, BLOCK_DESTRUCTION, EXPLOSION -> Verdict.DROP;
             case CHUNK_FORGET, OTHER -> Verdict.PASS;
         };
     }

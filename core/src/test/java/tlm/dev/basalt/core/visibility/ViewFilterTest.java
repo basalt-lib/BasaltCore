@@ -26,6 +26,12 @@ class ViewFilterTest {
         assertEquals(Verdict.DROP, ViewFilter.decide(PacketFacts.about(kind, HIDDEN), VIRTUAL));
     }
 
+    @ParameterizedTest
+    @EnumSource(value = PacketKind.class, names = {"SOUND", "PARTICLES", "LEVEL_EVENT", "BLOCK_EVENT", "BLOCK_DESTRUCTION", "EXPLOSION"})
+    void dropsSoundsAndEffectsOfTheRealWorldInsideTheHiddenChunk(PacketKind kind) {
+        assertEquals(Verdict.DROP, ViewFilter.decide(PacketFacts.about(kind, HIDDEN), VIRTUAL));
+    }
+
     @Test
     void letsTheClientForgetTheHiddenChunk() {
         assertEquals(Verdict.PASS, ViewFilter.decide(PacketFacts.about(PacketKind.CHUNK_FORGET, HIDDEN), VIRTUAL));

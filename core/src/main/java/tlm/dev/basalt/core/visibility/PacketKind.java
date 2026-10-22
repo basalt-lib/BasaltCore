@@ -8,5 +8,11 @@ public enum PacketKind {
     BLOCK_ENTITY,
     LIGHT,
     BIOMES,
+    SOUND,
+    PARTICLES,
+    LEVEL_EVENT,
+    BLOCK_EVENT,
+    BLOCK_DESTRUCTION,
+    EXPLOSION,
     OTHER
 }

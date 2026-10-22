@@ -11,6 +11,7 @@ import tlm.dev.basalt.nms.platform.MojangGameVersionSource;
 import tlm.dev.basalt.plugin.command.DebugChunkCommand;
 import tlm.dev.basalt.plugin.config.MessageFiles;
 import tlm.dev.basalt.plugin.config.MessageSettings;
+import tlm.dev.basalt.plugin.config.YamlFiles;
 import tlm.dev.basalt.plugin.facade.BasaltFacade;
 import tlm.dev.basalt.plugin.facade.ServiceRegistration;
 import tlm.dev.basalt.plugin.lifecycle.LifecycleManager;
@@ -28,7 +29,7 @@ public final class BasaltPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        MessageSettings messages = new MessageFiles(this).load();
+        MessageSettings messages = new MessageFiles(new YamlFiles(this), getLogger()).load();
         ChunkViews views = MojangChunkViews.create(getServer());
         BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion());
         FlyingKickListener flyingKicks = new FlyingKickListener(views, getLogger());

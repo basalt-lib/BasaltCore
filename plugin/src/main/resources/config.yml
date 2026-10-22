@@ -1,0 +1,3 @@
+interaction:
+  max-actions-per-second: 20
+  reach-margin: 1.0

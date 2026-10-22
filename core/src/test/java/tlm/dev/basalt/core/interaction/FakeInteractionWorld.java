@@ -17,23 +17,35 @@ final class FakeInteractionWorld implements InteractionWorld {
     static final int SHORT_GRASS = 1;
     static final int BASALT = 2;
     static final int STONE = 3;
+    static final float AIRBORNE_SLOWDOWN = 5.0F;
 
     final Map<UUID, InteractionContext> contexts = new HashMap<>();
     final Map<Integer, Float> progress = new HashMap<>();
     final Set<BlockPosition> occupied = new HashSet<>();
 
     void stand(UUID player, GameMode mode, long tick, OptionalInt heldBlock) {
-        contexts.put(player, new InteractionContext(tick, mode, new Point(1029.5, -58.38, 1027.5), 4.5, heldBlock));
+        PlayerStance stance = new PlayerStance(new Point(1029.5, -58.38, 1027.5), new Point(1029.5, -60.0, 1027.5), true, 4.5);
+        contexts.put(player, new InteractionContext(tick, mode, stance, heldBlock));
     }
 
     void eyes(UUID player, Point eyes) {
         InteractionContext current = contexts.get(player);
-        contexts.put(player, new InteractionContext(current.tick(), current.mode(), eyes, current.reach(), current.heldBlock()));
+        PlayerStance stance = current.stance();
+        put(player, current, new PlayerStance(eyes, stance.feet(), stance.onGround(), stance.reach()));
+    }
+
+    void airborne(UUID player, Point feet) {
+        InteractionContext current = contexts.get(player);
+        put(player, current, new PlayerStance(current.stance().eyes(), feet, false, current.stance().reach()));
     }
 
     void at(UUID player, long tick) {
         InteractionContext current = contexts.get(player);
-        contexts.put(player, new InteractionContext(tick, current.mode(), current.eyes(), current.reach(), current.heldBlock()));
+        contexts.put(player, new InteractionContext(tick, current.mode(), current.stance(), current.heldBlock()));
+    }
+
+    private void put(UUID player, InteractionContext current, PlayerStance stance) {
+        contexts.put(player, new InteractionContext(current.tick(), current.mode(), stance, current.heldBlock()));
     }
 
     @Override
@@ -42,8 +54,9 @@ final class FakeInteractionWorld implements InteractionWorld {
     }
 
     @Override
-    public float destroyProgress(UUID player, BlockPosition position, int state) {
-        return progress.getOrDefault(state, 0.0F);
+    public float destroyProgress(UUID player, BlockPosition position, int state, boolean standing) {
+        float perTick = progress.getOrDefault(state, 0.0F);
+        return standing ? perTick : perTick / AIRBORNE_SLOWDOWN;
     }
 
     @Override
@@ -54,6 +67,11 @@ final class FakeInteractionWorld implements InteractionWorld {
     @Override
     public boolean isAir(int state) {
         return state == AIR;
+    }
+
+    @Override
+    public boolean supports(int state) {
+        return state != AIR && state != SHORT_GRASS;
     }
 
     @Override

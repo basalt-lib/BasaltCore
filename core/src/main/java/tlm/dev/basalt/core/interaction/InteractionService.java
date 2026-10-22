@@ -75,7 +75,7 @@ public final class InteractionService {
             return InteractionOutcome.refused(Refusal.AIR, List.of(), false, request.sequence());
         }
         if (context.mode() == GameMode.CREATIVE
-                || InteractionValidator.breaksAtOnce(tools.world().destroyProgress(player, position, current.getAsInt()))) {
+                || InteractionValidator.breaksAtOnce(progress(player, position, current.getAsInt(), context))) {
             return breakNow(player, position, request.sequence());
         }
         List<BlockChange> updates = breaks.start(position, context.tick())
@@ -97,7 +97,7 @@ public final class InteractionService {
         if (tools.world().isAir(current.getAsInt())) {
             return InteractionOutcome.refused(Refusal.AIR, List.of(), false, request.sequence());
         }
-        float progress = tools.world().destroyProgress(player, position, current.getAsInt());
+        float progress = progress(player, position, current.getAsInt(), context);
         return switch (breaks.stop(position, context.tick(), progress)) {
             case BROKEN -> breakNow(player, position, request.sequence());
             case DELAYED -> InteractionOutcome.refused(Refusal.TOO_EARLY, List.of(), false, request.sequence());
@@ -176,7 +176,7 @@ public final class InteractionService {
             breaks.clearDelayed();
             return;
         }
-        float progress = tools.world().destroyProgress(player, position, current.getAsInt());
+        float progress = progress(player, position, current.getAsInt(), context.get());
         if (InteractionValidator.breaksWhenDelayed(progress, context.get().tick() - breaks.delayedSince())) {
             breaks.clearDelayed();
             int air = tools.world().air();
@@ -186,7 +186,26 @@ public final class InteractionService {
     }
 
     private boolean inReach(InteractionContext context, BlockPosition position) {
-        return InteractionValidator.withinReach(context.eyes(), position, context.reach(), settings.reachMargin());
+        return InteractionValidator.withinReach(context.stance().eyes(), position, context.stance().reach(), settings.reachMargin());
+    }
+
+    private float progress(UUID player, BlockPosition position, int state, InteractionContext context) {
+        return tools.world().destroyProgress(player, position, state, context.stance().onGround() || standsOnCopy(player, context.stance()));
+    }
+
+    private boolean standsOnCopy(UUID player, PlayerStance stance) {
+        Point feet = stance.feet();
+        int below = (int) Math.floor(feet.y() - PlayerStance.GROUND_PROBE);
+        for (double dx : new double[] {-PlayerStance.HALF_WIDTH, PlayerStance.HALF_WIDTH}) {
+            for (double dz : new double[] {-PlayerStance.HALF_WIDTH, PlayerStance.HALF_WIDTH}) {
+                BlockPosition support = new BlockPosition((int) Math.floor(feet.x() + dx), below, (int) Math.floor(feet.z() + dz));
+                OptionalInt state = tools.blocks().stateAt(player, support);
+                if (state.isPresent() && tools.world().supports(state.getAsInt())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private Optional<BlockChange> virtualState(UUID player, BlockPosition position) {

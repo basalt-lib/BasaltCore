@@ -19,6 +19,7 @@ import tlm.dev.basalt.core.interaction.GameMode;
 import tlm.dev.basalt.core.interaction.Hand;
 import tlm.dev.basalt.core.interaction.InteractionContext;
 import tlm.dev.basalt.core.interaction.InteractionWorld;
+import tlm.dev.basalt.core.interaction.PlayerStance;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.Point;
 
@@ -47,16 +48,23 @@ public final class MojangInteractionWorld implements InteractionWorld {
                 case SPECTATOR -> GameMode.SPECTATOR;
             };
             ItemStack held = online.getItemInHand(hand == Hand.MAIN ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
-            return new InteractionContext(online.level().getLagCompensationTick(), mode, new Point(eyes.x, eyes.y, eyes.z),
-                    online.blockInteractionRange(), placeableBlock(held));
+            PlayerStance stance = new PlayerStance(new Point(eyes.x, eyes.y, eyes.z),
+                    new Point(online.getX(), online.getY(), online.getZ()), online.onGround(), online.blockInteractionRange());
+            return new InteractionContext(online.level().getLagCompensationTick(), mode, stance, placeableBlock(held));
         });
     }
 
     @Override
-    public float destroyProgress(UUID player, BlockPosition position, int state) {
-        return handle(player)
-                .map(online -> Block.stateById(state).getDestroyProgress(online, online.level(), blockPos(position)))
-                .orElse(0.0F);
+    public float destroyProgress(UUID player, BlockPosition position, int state, boolean standing) {
+        return handle(player).map(online -> {
+            boolean simulated = online.onGround;
+            online.onGround = standing;
+            try {
+                return Block.stateById(state).getDestroyProgress(online, online.level(), blockPos(position));
+            } finally {
+                online.onGround = simulated;
+            }
+        }).orElse(0.0F);
     }
 
     @Override
@@ -67,6 +75,11 @@ public final class MojangInteractionWorld implements InteractionWorld {
     @Override
     public boolean isAir(int state) {
         return Block.stateById(state).isAir();
+    }
+
+    @Override
+    public boolean supports(int state) {
+        return !Block.stateById(state).getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO).isEmpty();
     }
 
     @Override

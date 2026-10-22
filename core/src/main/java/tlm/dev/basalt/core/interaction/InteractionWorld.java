@@ -9,11 +9,13 @@ public interface InteractionWorld {
 
     Optional<InteractionContext> context(UUID player, Hand hand);
 
-    float destroyProgress(UUID player, BlockPosition position, int state);
+    float destroyProgress(UUID player, BlockPosition position, int state, boolean standing);
 
     int air();
 
     boolean isAir(int state);
+
+    boolean supports(int state);
 
     boolean replaceable(int state);
 

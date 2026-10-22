@@ -76,6 +76,32 @@ class InteractionServiceTest {
     }
 
     @Test
+    void countsAPlayerStandingOnTheCopyAsOnTheGround() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        BlockPosition floor = new BlockPosition(1030, -58, 1027);
+        blocks.put(A, floor, FakeInteractionWorld.BASALT);
+        blocks.put(A, new BlockPosition(1031, -58, 1027), FakeInteractionWorld.SHORT_GRASS);
+        world.airborne(A, new Point(1030.75, -57.0, 1027.5));
+
+        service.handle(A, start(BLOCK, 1));
+        world.at(A, 113);
+
+        assertEquals(List.of(new BlockChange(BLOCK, FakeInteractionWorld.AIR)), service.handle(A, stop(BLOCK, 2)).changes());
+    }
+
+    @Test
+    void slowsAPlayerWithNothingUnderItsFeet() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        blocks.put(A, new BlockPosition(1031, -58, 1027), FakeInteractionWorld.SHORT_GRASS);
+        world.airborne(A, new Point(1031.5, -57.0, 1027.5));
+
+        service.handle(A, start(BLOCK, 1));
+        world.at(A, 113);
+
+        assertEquals(Optional.of(Refusal.TOO_EARLY), service.handle(A, stop(BLOCK, 2)).refusal());
+    }
+
+    @Test
     void breaksAtOnceWhenOneTickIsEnough() {
         world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
         world.progress.put(FakeInteractionWorld.BASALT, 1.0F);

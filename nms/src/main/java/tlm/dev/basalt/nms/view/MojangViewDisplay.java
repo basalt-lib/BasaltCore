@@ -27,7 +27,7 @@ public final class MojangViewDisplay implements ViewDisplay<VirtualCopy> {
     public void attach(UUID player, PlayerView<VirtualCopy> view) {
         Player online = server.getPlayer(player);
         if (online != null) {
-            tools.channels().attach(online, tools.filters().forView(view));
+            tools.channels().attach(online, tools.filters().forView(player, view));
         }
     }
 

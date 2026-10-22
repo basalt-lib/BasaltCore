@@ -5,7 +5,7 @@ import org.bukkit.entity.Player;
 
 public interface PlayerChannels {
 
-    void attach(Player player, OutboundFilter filter);
+    void attach(Player player, ChannelFilters filters);
 
     void detach(Player player);
 

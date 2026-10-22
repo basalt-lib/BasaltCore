@@ -5,7 +5,7 @@ import io.netty.channel.ChannelPipeline;
 import net.minecraft.network.protocol.Packet;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
-import tlm.dev.basalt.nms.port.OutboundFilter;
+import tlm.dev.basalt.nms.port.ChannelFilters;
 import tlm.dev.basalt.nms.port.PlayerChannels;
 
 import java.util.NoSuchElementException;
@@ -17,10 +17,10 @@ public final class NettyPlayerChannels implements PlayerChannels {
     private static final String ENCODER = "encoder";
 
     @Override
-    public void attach(Player player, OutboundFilter filter) {
+    public void attach(Player player, ChannelFilters filters) {
         ChannelPipeline pipeline = pipeline(player);
         removeHandler(pipeline);
-        ViewChannelHandler handler = new ViewChannelHandler(filter);
+        ViewChannelHandler handler = new ViewChannelHandler(filters);
         if (pipeline.get(UNBUNDLER) != null) {
             pipeline.addBefore(UNBUNDLER, HANDLER_NAME, handler);
         } else {

@@ -2,6 +2,8 @@ package tlm.dev.basalt.core.position;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -22,6 +24,21 @@ class ChunkKeyTest {
     void findsTheChunkOfABlock() {
         assertEquals(new ChunkKey(-1, 1), ChunkKey.ofBlock(-1, 17));
         assertEquals(new ChunkKey(0, 0), ChunkKey.ofBlock(15, 0));
+    }
+
+    @Test
+    void findsTheChunkHoldingAPoint() {
+        assertEquals(Optional.of(new ChunkKey(64, 64)), ChunkKey.containing(1024.0, 1039.99));
+        assertEquals(Optional.of(new ChunkKey(-1, -1)), ChunkKey.containing(-0.01, -16.0));
+        assertEquals(Optional.of(new ChunkKey(-2, 0)), ChunkKey.containing(-16.5, 15.999));
+    }
+
+    @Test
+    void findsNoChunkForAPointOutsideTheWorldOrNotFinite() {
+        assertEquals(Optional.empty(), ChunkKey.containing(Double.NaN, 0));
+        assertEquals(Optional.empty(), ChunkKey.containing(0, Double.POSITIVE_INFINITY));
+        assertEquals(Optional.empty(), ChunkKey.containing(31_000_000.0, 0));
+        assertEquals(Optional.empty(), ChunkKey.containing(0, -1.0E300));
     }
 
     @Test

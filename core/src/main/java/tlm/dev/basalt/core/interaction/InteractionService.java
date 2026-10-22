@@ -23,14 +23,14 @@ public final class InteractionService {
     }
 
     public InteractionOutcome handle(UUID player, InteractionRequest request) {
+        Optional<InteractionContext> context = tools.world().context(player, request.hand());
+        if (context.isEmpty()) {
+            return InteractionOutcome.ignored(Refusal.PLAYER_GONE);
+        }
         PlayerInteractions state = players.computeIfAbsent(player, id -> new PlayerInteractions(settings.maxActionsPerSecond()));
         Optional<Refusal> malformed = InteractionValidator.screen(request, state.lastSequence());
         if (malformed.isPresent()) {
             return InteractionOutcome.ignored(malformed.get());
-        }
-        Optional<InteractionContext> context = tools.world().context(player, request.hand());
-        if (context.isEmpty()) {
-            return InteractionOutcome.ignored(Refusal.PLAYER_GONE);
         }
         if (!state.budget().take(context.get().tick())) {
             return InteractionOutcome.ignored(Refusal.OVER_BUDGET);
@@ -57,6 +57,10 @@ public final class InteractionService {
 
     public void forget(UUID player) {
         players.remove(player);
+    }
+
+    int playersTracked() {
+        return players.size();
     }
 
     private InteractionOutcome startBreak(UUID player, InteractionRequest request, InteractionContext context, BreakTracker breaks) {

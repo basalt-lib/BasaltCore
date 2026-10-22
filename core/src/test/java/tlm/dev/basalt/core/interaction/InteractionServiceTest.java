@@ -229,6 +229,18 @@ class InteractionServiceTest {
     }
 
     @Test
+    void keepsNothingForARequestThatOutlivedItsPlayer() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        service.handle(A, start(BLOCK, 1));
+        service.forget(A);
+        world.contexts.remove(A);
+
+        service.handle(A, stop(BLOCK, 2));
+
+        assertEquals(0, service.playersTracked());
+    }
+
+    @Test
     void ignoresAPlayerWhoLeftAndForgetsBreaksInProgress() {
         assertEquals(Optional.of(Refusal.PLAYER_GONE), service.handle(A, start(BLOCK, 1)).refusal());
 

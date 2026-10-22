@@ -1,17 +1,19 @@
 package tlm.dev.basalt.nms.view;
 
-import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import org.bukkit.Server;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import tlm.dev.basalt.core.debug.DebugPattern;
+import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.visibility.PlayerView;
 import tlm.dev.basalt.core.visibility.ViewDisplay;
+import tlm.dev.basalt.nms.port.VirtualCopy;
 
+import java.util.OptionalInt;
 import java.util.UUID;
 
-public final class MojangViewDisplay implements ViewDisplay<ClientboundLevelChunkWithLightPacket> {
+public final class MojangViewDisplay implements ViewDisplay<VirtualCopy> {
 
     private final Server server;
     private final ViewTools tools;
@@ -22,7 +24,7 @@ public final class MojangViewDisplay implements ViewDisplay<ClientboundLevelChun
     }
 
     @Override
-    public void attach(UUID player, PlayerView<ClientboundLevelChunkWithLightPacket> view) {
+    public void attach(UUID player, PlayerView<VirtualCopy> view) {
         Player online = server.getPlayer(player);
         if (online != null) {
             tools.channels().attach(online, tools.filters().forView(view));
@@ -44,13 +46,26 @@ public final class MojangViewDisplay implements ViewDisplay<ClientboundLevelChun
     }
 
     @Override
-    public ClientboundLevelChunkWithLightPacket buildVirtual(UUID player, ChunkKey chunk, DebugPattern pattern) {
+    public VirtualCopy buildVirtual(UUID player, ChunkKey chunk, DebugPattern pattern) {
         return tools.packets().virtualChunk(online(player), chunk, pattern);
     }
 
     @Override
-    public void sendVirtual(UUID player, ClientboundLevelChunkWithLightPacket payload) {
-        tools.channels().writeDirect(online(player), payload);
+    public OptionalInt blockAt(VirtualCopy copy, BlockPosition position) {
+        if (!copy.chunk().key().equals(position.chunk()) || !copy.chunk().holds(position.localX(), position.y(), position.localZ())) {
+            return OptionalInt.empty();
+        }
+        return OptionalInt.of(copy.chunk().stateAt(position.localX(), position.y(), position.localZ()));
+    }
+
+    @Override
+    public VirtualCopy withBlock(UUID player, VirtualCopy copy, BlockPosition position, int state) {
+        return tools.packets().withBlock(online(player), copy, position, state);
+    }
+
+    @Override
+    public void sendVirtual(UUID player, VirtualCopy payload) {
+        tools.channels().writeDirect(online(player), payload.packet());
     }
 
     @Override

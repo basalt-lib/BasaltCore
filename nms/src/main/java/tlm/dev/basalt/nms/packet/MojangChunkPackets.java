@@ -23,8 +23,10 @@ import tlm.dev.basalt.core.chunk.DebugChunkPattern;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.chunk.VirtualChunkBuilder;
 import tlm.dev.basalt.core.debug.DebugPattern;
+import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.nms.port.ChunkPackets;
+import tlm.dev.basalt.nms.port.VirtualCopy;
 
 import java.util.Optional;
 
@@ -33,22 +35,38 @@ public final class MojangChunkPackets implements ChunkPackets {
     private static final MojangBlockStateTraits TRAITS = new MojangBlockStateTraits();
 
     @Override
-    public ClientboundLevelChunkWithLightPacket virtualChunk(Player player, ChunkKey chunk, DebugPattern pattern) {
+    public VirtualCopy virtualChunk(Player player, ChunkKey chunk, DebugPattern pattern) {
         ServerLevel level = ((CraftPlayer) player).getHandle().level();
         Registry<Biome> biomes = level.registryAccess().lookupOrThrow(Registries.BIOME);
-        ChunkFormats formats = ChunkFormats.of(Block.BLOCK_STATE_REGISTRY.size(), biomes.size());
         VirtualChunkBuilder builder = new VirtualChunkBuilder(
                 chunk, new ChunkShape(level.getMinY(), level.getSectionsCount()), Block.getId(Blocks.AIR.defaultBlockState()));
         DebugChunkPattern.paint(pattern, builder, MojangChunkPackets::defaultStateId);
-        VirtualChunk virtualChunk = builder.build(formats, TRAITS, biomes.getId(biomes.getValueOrThrow(Biomes.PLAINS)));
+        VirtualChunk virtualChunk = builder.build(formats(level), TRAITS, biomes.getId(biomes.getValueOrThrow(Biomes.PLAINS)));
+        return new VirtualCopy(virtualChunk, encode(level, virtualChunk));
+    }
+
+    @Override
+    public VirtualCopy withBlock(Player player, VirtualCopy copy, BlockPosition position, int state) {
+        VirtualChunk changed = copy.chunk().withBlock(position.localX(), position.y(), position.localZ(), state, TRAITS);
+        if (changed == copy.chunk()) {
+            return copy;
+        }
+        return new VirtualCopy(changed, encode(((CraftPlayer) player).getHandle().level(), changed));
+    }
+
+    private static ClientboundLevelChunkWithLightPacket encode(ServerLevel level, VirtualChunk virtualChunk) {
         RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(
-                Unpooled.wrappedBuffer(new ChunkPacketWriter(formats).write(virtualChunk)), level.registryAccess());
+                Unpooled.wrappedBuffer(new ChunkPacketWriter(formats(level)).write(virtualChunk)), level.registryAccess());
         ClientboundLevelChunkWithLightPacket packet = ClientboundLevelChunkWithLightPacket.STREAM_CODEC.decode(buffer);
         if (buffer.isReadable()) {
-            throw new IllegalStateException(buffer.readableBytes() + " bytes left after decoding the virtual chunk " + chunk);
+            throw new IllegalStateException(buffer.readableBytes() + " bytes left after decoding the virtual chunk " + virtualChunk.key());
         }
         packet.setReady(true);
         return packet;
+    }
+
+    private static ChunkFormats formats(ServerLevel level) {
+        return ChunkFormats.of(Block.BLOCK_STATE_REGISTRY.size(), level.registryAccess().lookupOrThrow(Registries.BIOME).size());
     }
 
     @Override

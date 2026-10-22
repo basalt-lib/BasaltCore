@@ -20,6 +20,15 @@ public final class PlayerView<T> {
         return true;
     }
 
+    public boolean update(T payload) {
+        ViewSnapshot<T> current = snapshot;
+        if (!current.isVirtual()) {
+            return false;
+        }
+        snapshot = ViewSnapshot.virtual(current.virtualChunk(), payload);
+        return true;
+    }
+
     public Optional<ChunkKey> exit() {
         ViewSnapshot<T> previous = snapshot;
         if (!previous.isVirtual()) {

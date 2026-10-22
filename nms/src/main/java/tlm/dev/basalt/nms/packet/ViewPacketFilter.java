@@ -4,7 +4,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 import net.minecraft.network.protocol.game.ClientboundChunksBiomesPacket;
-import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import tlm.dev.basalt.core.visibility.PacketFacts;
 import tlm.dev.basalt.core.visibility.PacketKind;
 import tlm.dev.basalt.core.visibility.PlayerView;
@@ -12,21 +11,22 @@ import tlm.dev.basalt.core.visibility.Verdict;
 import tlm.dev.basalt.core.visibility.ViewFilter;
 import tlm.dev.basalt.core.visibility.ViewSnapshot;
 import tlm.dev.basalt.nms.port.OutboundFilter;
+import tlm.dev.basalt.nms.port.VirtualCopy;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public final class ViewPacketFilter implements OutboundFilter {
 
-    private final PlayerView<ClientboundLevelChunkWithLightPacket> view;
+    private final PlayerView<VirtualCopy> view;
 
-    public ViewPacketFilter(PlayerView<ClientboundLevelChunkWithLightPacket> view) {
+    public ViewPacketFilter(PlayerView<VirtualCopy> view) {
         this.view = view;
     }
 
     @Override
     public Object filter(Object message) {
-        ViewSnapshot<ClientboundLevelChunkWithLightPacket> snapshot = view.snapshot();
+        ViewSnapshot<VirtualCopy> snapshot = view.snapshot();
         if (!snapshot.isVirtual()) {
             return message;
         }
@@ -36,14 +36,14 @@ public final class ViewPacketFilter implements OutboundFilter {
             case Packet<?> packet -> switch (ViewFilter.decide(PacketClassifier.classify(packet), snapshot)) {
                 case PASS -> packet;
                 case DROP -> null;
-                case REPLACE_WITH_VIRTUAL -> snapshot.virtualPayload();
+                case REPLACE_WITH_VIRTUAL -> snapshot.virtualPayload().packet();
             };
             default -> message;
         };
     }
 
     private static ClientboundBundlePacket filterBundle(
-            ClientboundBundlePacket bundle, ViewSnapshot<ClientboundLevelChunkWithLightPacket> snapshot) {
+            ClientboundBundlePacket bundle, ViewSnapshot<VirtualCopy> snapshot) {
         List<Packet<? super ClientGamePacketListener>> kept = new ArrayList<>();
         boolean changed = false;
         for (Packet<? super ClientGamePacketListener> content : bundle.subPackets()) {
@@ -59,7 +59,7 @@ public final class ViewPacketFilter implements OutboundFilter {
             changed |= verdict != Verdict.PASS;
             switch (verdict) {
                 case PASS -> kept.add(content);
-                case REPLACE_WITH_VIRTUAL -> kept.add(snapshot.virtualPayload());
+                case REPLACE_WITH_VIRTUAL -> kept.add(snapshot.virtualPayload().packet());
                 case DROP -> {
                 }
             }
@@ -71,7 +71,7 @@ public final class ViewPacketFilter implements OutboundFilter {
     }
 
     private static ClientboundChunksBiomesPacket filterBiomes(
-            ClientboundChunksBiomesPacket packet, ViewSnapshot<ClientboundLevelChunkWithLightPacket> snapshot) {
+            ClientboundChunksBiomesPacket packet, ViewSnapshot<VirtualCopy> snapshot) {
         List<ClientboundChunksBiomesPacket.ChunkBiomeData> entries = packet.chunkBiomeData();
         List<PacketFacts> facts = entries.stream()
                 .map(entry -> PacketFacts.about(PacketKind.BIOMES, PacketClassifier.key(entry.pos())))

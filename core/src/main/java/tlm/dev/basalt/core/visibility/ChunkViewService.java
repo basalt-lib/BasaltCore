@@ -1,9 +1,11 @@
 package tlm.dev.basalt.core.visibility;
 
 import tlm.dev.basalt.core.debug.DebugPattern;
+import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 public final class ChunkViewService<T> implements ChunkViews {
@@ -55,6 +57,28 @@ public final class ChunkViewService<T> implements ChunkViews {
             display.detach(player);
         }
         return left.isPresent() ? HideResult.RESTORED : HideResult.NOT_VIRTUAL;
+    }
+
+    @Override
+    public OptionalInt blockAt(UUID player, BlockPosition position) {
+        Optional<PlayerView<T>> found = views.find(player);
+        if (found.isEmpty() || !found.get().snapshot().hides(position.chunk())) {
+            return OptionalInt.empty();
+        }
+        return display.blockAt(found.get().snapshot().virtualPayload(), position);
+    }
+
+    @Override
+    public boolean setBlock(UUID player, BlockPosition position, int state) {
+        Optional<PlayerView<T>> found = views.find(player);
+        if (found.isEmpty()) {
+            return false;
+        }
+        ViewSnapshot<T> snapshot = found.get().snapshot();
+        if (!snapshot.hides(position.chunk()) || display.blockAt(snapshot.virtualPayload(), position).isEmpty()) {
+            return false;
+        }
+        return found.get().update(display.withBlock(player, snapshot.virtualPayload(), position, state));
     }
 
     @Override

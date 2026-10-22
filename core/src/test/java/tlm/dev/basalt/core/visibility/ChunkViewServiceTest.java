@@ -3,10 +3,12 @@ package tlm.dev.basalt.core.visibility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tlm.dev.basalt.core.debug.DebugPattern;
+import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -141,6 +143,48 @@ class ChunkViewServiceTest {
 
             assertEquals("restart flying check while real", display.events.getFirst(), cause.name());
         }
+    }
+
+    @Test
+    void changesTheVirtualCopyAndPublishesIt() {
+        service.show(PLAYER, CHUNK, DebugPattern.RAISED);
+        display.events.clear();
+        BlockPosition block = new BlockPosition(3, -54, 4);
+
+        assertEquals(OptionalInt.of(0), service.blockAt(PLAYER, block));
+        assertTrue(service.setBlock(PLAYER, block, 7));
+
+        assertEquals(OptionalInt.of(7), service.blockAt(PLAYER, block));
+        assertEquals(List.of("encode V00+7 while virtual"), display.events);
+        assertEquals("V00+7", display.attached.get(PLAYER).snapshot().virtualPayload());
+        assertEquals(CHUNK, display.attached.get(PLAYER).snapshot().virtualChunk());
+    }
+
+    @Test
+    void leavesBlocksOutsideTheVirtualCopyAlone() {
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
+        display.events.clear();
+
+        assertEquals(OptionalInt.empty(), service.blockAt(PLAYER, new BlockPosition(16, -54, 0)));
+        assertFalse(service.setBlock(PLAYER, new BlockPosition(16, -54, 0), 7));
+        assertFalse(service.setBlock(PLAYER, new BlockPosition(0, 320, 0), 7));
+        assertFalse(service.setBlock(OTHER, new BlockPosition(0, -54, 0), 7));
+        assertEquals(OptionalInt.empty(), service.blockAt(OTHER, new BlockPosition(0, -54, 0)));
+        assertEquals(List.of(), display.events);
+        assertEquals("V00", display.attached.get(PLAYER).snapshot().virtualPayload());
+    }
+
+    @Test
+    void forgetsTheChangedCopyOnExit() {
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
+        service.setBlock(PLAYER, new BlockPosition(0, -54, 0), 7);
+
+        service.hide(PLAYER, ExitCause.COMMAND);
+
+        assertFalse(service.setBlock(PLAYER, new BlockPosition(0, -54, 0), 8));
+        assertEquals(OptionalInt.empty(), service.blockAt(PLAYER, new BlockPosition(0, -54, 0)));
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
+        assertEquals("V00", display.attached.get(PLAYER).snapshot().virtualPayload());
     }
 
     @Test

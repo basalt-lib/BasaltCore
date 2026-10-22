@@ -56,6 +56,19 @@ class PlayerViewTest {
     }
 
     @Test
+    void replacesThePayloadOfTheSameVirtualChunk() {
+        assertFalse(view.update("too early"));
+        view.enter(new ChunkKey(1, 2), "payload");
+        ViewSnapshot<String> before = view.snapshot();
+
+        assertTrue(view.update("changed"));
+
+        assertEquals(new ChunkKey(1, 2), view.snapshot().virtualChunk());
+        assertEquals("changed", view.snapshot().virtualPayload());
+        assertEquals("payload", before.virtualPayload());
+    }
+
+    @Test
     void keepsOneViewPerPlayer() {
         PlayerViews<String> views = new PlayerViews<>();
         UUID player = UUID.randomUUID();

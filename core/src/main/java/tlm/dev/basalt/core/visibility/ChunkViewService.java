@@ -12,9 +12,11 @@ public final class ChunkViewService<T> implements ChunkViews {
 
     private final PlayerViews<T> views = new PlayerViews<>();
     private final ViewDisplay<T> display;
+    private final ViewChanges changes;
 
-    public ChunkViewService(ViewDisplay<T> display) {
+    public ChunkViewService(ViewDisplay<T> display, ViewChanges changes) {
         this.display = display;
+        this.changes = changes;
     }
 
     @Override
@@ -39,6 +41,7 @@ public final class ChunkViewService<T> implements ChunkViews {
         if (display.hasChunk(player, chunk)) {
             display.sendVirtual(player, payload);
         }
+        changes.entered(player, chunk);
         return ShowResult.SHOWN;
     }
 
@@ -52,6 +55,7 @@ public final class ChunkViewService<T> implements ChunkViews {
         left.ifPresent(chunk -> display.restartFlyingCheck(player));
         left.filter(chunk -> cause.clientKeepsChunks() && display.hasChunk(player, chunk))
                 .ifPresent(chunk -> display.resendReal(player, chunk));
+        left.ifPresent(chunk -> changes.left(player, cause));
         if (cause.endsTracking()) {
             views.close(player);
             display.detach(player);

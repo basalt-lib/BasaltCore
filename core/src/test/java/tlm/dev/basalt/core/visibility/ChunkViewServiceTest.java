@@ -6,6 +6,8 @@ import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -22,7 +24,8 @@ class ChunkViewServiceTest {
     private static final ChunkKey CHUNK = new ChunkKey(0, 0);
 
     private final FakeDisplay display = new FakeDisplay();
-    private final ChunkViewService<String> service = new ChunkViewService<>(display);
+    private final List<String> changed = new ArrayList<>();
+    private final ChunkViewService<String> service = new ChunkViewService<>(display, new FakeChanges(changed));
 
     @BeforeEach
     void trackThePlayer() {
@@ -192,6 +195,50 @@ class ChunkViewServiceTest {
         assertEquals(HideResult.NOT_VIRTUAL, service.hide(PLAYER, ExitCause.COMMAND));
         assertEquals(HideResult.NOT_VIRTUAL, service.hide(OTHER, ExitCause.COMMAND));
         assertEquals(List.of(), display.events);
+    }
+
+    @Test
+    void tellsTheChangesAfterTheChunkOnEntryAndOnExit() {
+        ChunkViewService<String> ordered = new ChunkViewService<>(display, new FakeChanges(display.events));
+        ordered.track(PLAYER);
+        display.clientChunks.add(CHUNK);
+        display.events.clear();
+
+        ordered.show(PLAYER, CHUNK, DebugPattern.FLAT);
+        ordered.hide(PLAYER, ExitCause.COMMAND);
+
+        assertEquals(List.of("build 0 0", "send V00 while virtual", "entered 0 0",
+                "restart flying check while real", "resend 0 0 while real", "left COMMAND"), display.events);
+    }
+
+    @Test
+    void tellsEveryExitCauseOnceAndNothingForARealPlayer() {
+        for (ExitCause cause : ExitCause.values()) {
+            service.track(PLAYER);
+            service.show(PLAYER, CHUNK, DebugPattern.FLAT);
+            service.hide(PLAYER, cause);
+            service.hide(PLAYER, cause);
+        }
+        service.show(OTHER, CHUNK, DebugPattern.FLAT);
+
+        assertEquals(List.of("entered 0 0", "left COMMAND", "entered 0 0", "left WORLD_CHANGE",
+                "entered 0 0", "left DISCONNECT", "entered 0 0", "left SHUTDOWN"), changed);
+    }
+
+    @Test
+    void tellsNoEntryForARefusedChunk() {
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
+        changed.clear();
+
+        service.show(PLAYER, new ChunkKey(5, 5), DebugPattern.FLAT);
+
+        assertEquals(List.of(), changed);
+    }
+
+    @Test
+    void onlyADisconnectionMeansThePlayerLeaves() {
+        assertEquals(List.of(ExitCause.DISCONNECT),
+                Arrays.stream(ExitCause.values()).filter(ExitCause::playerLeaves).toList());
     }
 
     @Test

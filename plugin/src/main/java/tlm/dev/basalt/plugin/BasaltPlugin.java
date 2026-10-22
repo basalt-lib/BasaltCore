@@ -8,7 +8,10 @@ import tlm.dev.basalt.core.interaction.InteractionService;
 import tlm.dev.basalt.core.interaction.InteractionSettings;
 import tlm.dev.basalt.core.interaction.InteractionTools;
 import tlm.dev.basalt.core.platform.GameVersion;
+import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.visibility.ChunkViews;
+import tlm.dev.basalt.core.visibility.ExitCause;
+import tlm.dev.basalt.core.visibility.ViewChanges;
 import tlm.dev.basalt.nms.MojangChunkViews;
 import tlm.dev.basalt.nms.MojangInteractions;
 import tlm.dev.basalt.nms.platform.MojangGameVersionSource;
@@ -33,6 +36,7 @@ import tlm.dev.basalt.plugin.listener.ViewSessions;
 import tlm.dev.basalt.plugin.listener.WorldChangeListener;
 
 import java.util.List;
+import java.util.UUID;
 
 public final class BasaltPlugin extends JavaPlugin {
 
@@ -46,7 +50,15 @@ public final class BasaltPlugin extends JavaPlugin {
         ConfigReader reader = new ConfigReader(config.path(), config.server()::get, config.shipped()::get, getLogger()::warning);
         InteractionSettings settings = InteractionSettingsParser.parse(reader);
         InteractionQueues queues = new InteractionQueues(settings.maxActionsPerSecond());
-        ChunkViews views = MojangChunkViews.create(getServer(), queues);
+        ChunkViews views = MojangChunkViews.create(getServer(), queues, new ViewChanges() {
+            @Override
+            public void entered(UUID player, ChunkKey chunk) {
+            }
+
+            @Override
+            public void left(UUID player, ExitCause cause) {
+            }
+        });
         InteractionService interactions = new InteractionService(new InteractionTools(
                 MojangInteractions.world(getServer()), new ViewBlocks(views), MojangInteractions.replies(getServer())), settings);
         BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion());

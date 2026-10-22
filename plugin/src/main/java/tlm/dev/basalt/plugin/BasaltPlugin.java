@@ -14,6 +14,7 @@ import tlm.dev.basalt.nms.MojangInteractions;
 import tlm.dev.basalt.nms.platform.MojangGameVersionSource;
 import tlm.dev.basalt.plugin.command.DebugChunkCommand;
 import tlm.dev.basalt.plugin.config.ConfigFile;
+import tlm.dev.basalt.plugin.config.ConfigReader;
 import tlm.dev.basalt.plugin.config.InteractionSettingsParser;
 import tlm.dev.basalt.plugin.config.MessageFiles;
 import tlm.dev.basalt.plugin.config.MessageSettings;
@@ -42,7 +43,8 @@ public final class BasaltPlugin extends JavaPlugin {
         YamlFiles files = new YamlFiles(this);
         MessageSettings messages = new MessageFiles(files, getLogger()).load();
         ConfigFile config = files.load(InteractionSettingsParser.FILE_NAME);
-        InteractionSettings settings = InteractionSettingsParser.parse(config.path(), config.server()::get, config.shipped()::get, getLogger()::warning);
+        ConfigReader reader = new ConfigReader(config.path(), config.server()::get, config.shipped()::get, getLogger()::warning);
+        InteractionSettings settings = InteractionSettingsParser.parse(reader);
         InteractionQueues queues = new InteractionQueues(settings.maxActionsPerSecond());
         ChunkViews views = MojangChunkViews.create(getServer(), queues);
         InteractionService interactions = new InteractionService(new InteractionTools(

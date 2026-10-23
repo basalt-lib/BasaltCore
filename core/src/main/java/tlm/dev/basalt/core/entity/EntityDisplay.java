@@ -14,4 +14,6 @@ public interface EntityDisplay {
     void die(UUID player, VirtualEntity entity);
 
     void remove(UUID player, List<Integer> ids);
+
+    void removeDead(UUID player, List<Integer> ids);
 }

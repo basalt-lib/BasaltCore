@@ -32,4 +32,9 @@ final class FakeEntityDisplay implements EntityDisplay {
     public void remove(UUID player, List<Integer> ids) {
         events.add("remove " + ids);
     }
+
+    @Override
+    public void removeDead(UUID player, List<Integer> ids) {
+        events.add("remove dead " + ids);
+    }
 }

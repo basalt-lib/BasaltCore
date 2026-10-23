@@ -117,7 +117,7 @@ public final class VirtualEntityService {
         for (Map.Entry<UUID, PlayerEntities> entry : players.entrySet()) {
             List<Integer> removed = entry.getValue().removeDeadSince(removable);
             if (!removed.isEmpty()) {
-                tools.display().remove(entry.getKey(), removed);
+                tools.display().removeDead(entry.getKey(), removed);
                 tools.views().publish(entry.getKey(), entry.getValue().ids());
             }
         }

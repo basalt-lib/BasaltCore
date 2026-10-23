@@ -93,7 +93,7 @@ class VirtualEntityServiceTest {
         advance(1);
 
         assertEquals(List.of("hurt #1001 health 4", "hurt #1001 health 3", "hurt #1001 health 2", "hurt #1001 health 1",
-                "die #1001", "remove [1001]"), display.events);
+                "die #1001", "remove dead [1001]"), display.events);
         assertEquals(Set.of(), views.published.get(PLAYER));
         assertEquals(new EntityStatus(0, Optional.empty(), 5, 0), service.status(PLAYER));
     }

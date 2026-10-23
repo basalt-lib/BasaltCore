@@ -142,7 +142,9 @@ class VirtualEntityServiceTest {
         service.spawn(PLAYER, INSIDE);
         display.events.clear();
 
+        assertEquals(2, service.held());
         assertEquals(2, service.removeAll(PLAYER));
+        assertEquals(0, service.held());
         assertEquals(0, service.removeAll(PLAYER));
         assertEquals(List.of("remove [1001, 1002]"), display.events);
         assertEquals(Set.of(), views.published.get(PLAYER));

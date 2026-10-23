@@ -131,6 +131,10 @@ public final class VirtualEntityService {
         return new EntityStatus(entities.size(), entities.newest(), entities.hits(), entities.uses());
     }
 
+    public int held() {
+        return players.values().stream().mapToInt(PlayerEntities::size).sum();
+    }
+
     int playersTracked() {
         return players.size();
     }

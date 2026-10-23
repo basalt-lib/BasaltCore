@@ -3,9 +3,9 @@ package tlm.dev.basalt.plugin.command;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
-import com.mojang.brigadier.tree.LiteralCommandNode;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -23,8 +23,6 @@ import tlm.dev.basalt.plugin.config.MessageSettings;
 
 public final class DebugChunkCommand {
 
-    public static final String PERMISSION = "basalt.admin";
-
     private static final String PLAYER = "player";
     private static final String CHUNK_X = "cx";
     private static final String CHUNK_Z = "cz";
@@ -39,17 +37,13 @@ public final class DebugChunkCommand {
         this.messages = messages;
     }
 
-    public LiteralCommandNode<CommandSourceStack> node() {
-        return Commands.literal("basalt")
-                .requires(source -> source.getSender().hasPermission(PERMISSION))
-                .then(Commands.literal("debug")
-                        .then(Commands.literal("chunk")
-                                .then(Commands.argument(PLAYER, StringArgumentType.word())
-                                        .then(Commands.literal("on")
-                                                .then(Commands.argument(CHUNK_X, coordinate())
-                                                        .then(patterns(Commands.argument(CHUNK_Z, coordinate())))))
-                                        .then(Commands.literal("off").executes(this::hide)))))
-                .build();
+    public LiteralArgumentBuilder<CommandSourceStack> branch() {
+        return Commands.literal("chunk")
+                .then(Commands.argument(PLAYER, StringArgumentType.word())
+                        .then(Commands.literal("on")
+                                .then(Commands.argument(CHUNK_X, coordinate())
+                                        .then(patterns(Commands.argument(CHUNK_Z, coordinate())))))
+                        .then(Commands.literal("off").executes(this::hide)));
     }
 
     private RequiredArgumentBuilder<CommandSourceStack, Integer> patterns(RequiredArgumentBuilder<CommandSourceStack, Integer> chunkZ) {

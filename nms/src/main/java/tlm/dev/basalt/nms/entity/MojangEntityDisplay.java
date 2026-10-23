@@ -6,7 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
-import net.minecraft.network.protocol.game.ClientboundBundleDelimiterPacket;
+import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 import net.minecraft.network.protocol.game.ClientboundDamageEventPacket;
 import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
@@ -66,11 +66,10 @@ public final class MojangEntityDisplay implements EntityDisplay {
         }
         Vec3 at = position(entity);
         float yaw = entity.rotation().yaw();
-        channels.writeDirect(online, new ClientboundBundleDelimiterPacket());
-        channels.writeDirect(online, new ClientboundAddEntityPacket(entity.id(), entity.uuid(), at.x, at.y, at.z,
-                entity.rotation().pitch(), yaw, template.get().getType(), 0, Vec3.ZERO, yaw));
-        channels.writeDirect(online, new ClientboundSetEntityDataPacket(entity.id(), template.get().getEntityData().packAll()));
-        channels.writeDirect(online, new ClientboundBundleDelimiterPacket());
+        handle.connection.send(new ClientboundBundlePacket(List.of(
+                new ClientboundAddEntityPacket(entity.id(), entity.uuid(), at.x, at.y, at.z,
+                        entity.rotation().pitch(), yaw, template.get().getType(), 0, Vec3.ZERO, yaw),
+                new ClientboundSetEntityDataPacket(entity.id(), template.get().getEntityData().packAll()))));
     }
 
     @Override

@@ -250,6 +250,17 @@ class ChunkViewServiceTest {
     }
 
     @Test
+    void tellsBothListenersInOrder() {
+        List<String> heard = new ArrayList<>();
+        ViewChanges both = ViewChanges.both(new FakeChanges(heard), new FakeChanges(heard));
+
+        both.entered(PLAYER, CHUNK);
+        both.left(PLAYER, ExitCause.COMMAND);
+
+        assertEquals(List.of("entered 0 0", "entered 0 0", "left COMMAND", "left COMMAND"), heard);
+    }
+
+    @Test
     void onlyADisconnectionMeansThePlayerLeaves() {
         assertEquals(List.of(ExitCause.DISCONNECT),
                 Arrays.stream(ExitCause.values()).filter(ExitCause::playerLeaves).toList());

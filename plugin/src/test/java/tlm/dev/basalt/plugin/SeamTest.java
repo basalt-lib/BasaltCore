@@ -31,7 +31,7 @@ class SeamTest {
     private static final Pattern BUKKIT = Pattern.compile("org[.]bukkit\\b");
     private static final Map<String, Set<String>> FAMILIES = Map.of(
             "api", Set.of(),
-            "core", Set.of("chunk", "entity", "interaction", "visibility"),
+            "core", Set.of("chunk", "entity", "interaction", "visibility", "world"),
             "nms", Set.of("channel", "entity", "interaction", "packet", "view"),
             "plugin", Set.of("command", "entity", "facade", "interaction", "listener", "masking"));
     private static final Map<String, Set<String>> PLUMBING = Map.of(

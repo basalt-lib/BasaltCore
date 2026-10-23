@@ -6,6 +6,7 @@ import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
 
 public interface ChunkViews {
@@ -23,4 +24,6 @@ public interface ChunkViews {
     OptionalInt blockAt(UUID player, BlockPosition position);
 
     boolean setBlock(UUID player, BlockPosition position, int state);
+
+    boolean publishEntities(UUID player, Set<Integer> ids);
 }

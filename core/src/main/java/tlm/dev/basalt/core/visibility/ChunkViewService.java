@@ -6,6 +6,7 @@ import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
 
 public final class ChunkViewService<T> implements ChunkViews {
@@ -83,6 +84,11 @@ public final class ChunkViewService<T> implements ChunkViews {
             return false;
         }
         return found.get().update(display.withBlock(player, snapshot.virtualPayload(), position, state));
+    }
+
+    @Override
+    public boolean publishEntities(UUID player, Set<Integer> ids) {
+        return views.find(player).map(view -> view.publishEntities(ids)).orElse(false);
     }
 
     @Override

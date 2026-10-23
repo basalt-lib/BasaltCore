@@ -3,6 +3,7 @@ package tlm.dev.basalt.core.visibility;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.Optional;
+import java.util.Set;
 
 public final class PlayerView<T> {
 
@@ -25,7 +26,16 @@ public final class PlayerView<T> {
         if (!current.isVirtual()) {
             return false;
         }
-        snapshot = ViewSnapshot.virtual(current.virtualChunk(), payload);
+        snapshot = current.withPayload(payload);
+        return true;
+    }
+
+    public boolean publishEntities(Set<Integer> ids) {
+        ViewSnapshot<T> current = snapshot;
+        if (!current.isVirtual()) {
+            return false;
+        }
+        snapshot = current.withEntities(ids);
         return true;
     }
 

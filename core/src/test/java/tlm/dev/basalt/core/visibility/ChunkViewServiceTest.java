@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -188,6 +189,19 @@ class ChunkViewServiceTest {
         assertEquals(OptionalInt.empty(), service.blockAt(PLAYER, new BlockPosition(0, -54, 0)));
         service.show(PLAYER, CHUNK, DebugPattern.FLAT);
         assertEquals("V00", display.attached.get(PLAYER).snapshot().virtualPayload());
+    }
+
+    @Test
+    void publishesTheEntitiesOfAVirtualPlayerOnly() {
+        assertFalse(service.publishEntities(PLAYER, Set.of(1001)));
+        assertFalse(service.publishEntities(OTHER, Set.of(1001)));
+
+        service.show(PLAYER, CHUNK, DebugPattern.FLAT);
+
+        assertTrue(service.publishEntities(PLAYER, Set.of(1001)));
+        assertTrue(display.attached.get(PLAYER).snapshot().holdsEntity(1001));
+        service.hide(PLAYER, ExitCause.COMMAND);
+        assertFalse(display.attached.get(PLAYER).snapshot().holdsEntity(1001));
     }
 
     @Test

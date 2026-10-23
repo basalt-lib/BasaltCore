@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,6 +27,20 @@ class PlayerViewTest {
 
         assertTrue(view.snapshot().hides(new ChunkKey(1, 2)));
         assertEquals("payload", view.snapshot().virtualPayload());
+    }
+
+    @Test
+    void publishesItsEntitiesAndKeepsThemAcrossACopyChange() {
+        assertFalse(view.publishEntities(Set.of(1001)));
+
+        view.enter(new ChunkKey(1, 2), "copy");
+        assertTrue(view.publishEntities(Set.of(1001)));
+        view.update("changed copy");
+
+        assertTrue(view.snapshot().holdsEntity(1001));
+        view.exit();
+        assertFalse(view.snapshot().holdsEntity(1001));
+        assertFalse(view.publishEntities(Set.of(1002)));
     }
 
     @Test

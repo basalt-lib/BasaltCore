@@ -53,26 +53,67 @@ public final class VirtualChunk {
     }
 
     public VirtualChunk withBlock(int x, int y, int z, int state, BlockStateTraits traits) {
+        return filled(new LocalBox(x, y, z, x, y, z), state, traits);
+    }
+
+    public VirtualChunk filled(LocalBox box, int state, BlockStateTraits traits) {
         if (state < 0) {
             throw new IllegalArgumentException("negative state " + state);
         }
-        int sectionIndex = shape.sectionIndex(y);
-        int localY = (y - shape.minY()) & 15;
-        ChunkSection section = sections.get(sectionIndex);
-        int previous = section.stateAt(x, localY, z);
-        if (previous == state) {
+        if (!shape.containsY(box.minY()) || !shape.containsY(box.maxY())) {
+            throw new IndexOutOfBoundsException("y " + box.minY() + " to " + box.maxY() + " outside the chunk");
+        }
+        List<ChunkSection> changed = new ArrayList<>(sections);
+        boolean any = false;
+        for (int sectionIndex = shape.sectionIndex(box.minY()); sectionIndex <= shape.sectionIndex(box.maxY()); sectionIndex++) {
+            ChunkSection filled = fillSection(sectionIndex, box, state, traits);
+            if (filled != sections.get(sectionIndex)) {
+                changed.set(sectionIndex, filled);
+                any = true;
+            }
+        }
+        if (!any) {
             return this;
         }
-        int[] states = section.states().toArray();
-        states[ChunkSection.blockIndex(x, localY, z)] = state;
-        int nonAir = section.nonAirCount() + (traits.isAir(previous) ? 0 : -1) + (traits.isAir(state) ? 0 : 1);
-        List<ChunkSection> changed = new ArrayList<>(sections);
-        changed.set(sectionIndex, new ChunkSection(PalettedValues.of(states, section.states().format()), section.biomes(), nonAir));
         Map<HeightmapType, int[]> changedHeights = copy(heights);
-        for (HeightmapType type : HeightmapType.values()) {
-            changedHeights.get(type)[HeightmapCodec.column(x, z)] = columnHeight(changed, x, z, type, traits);
+        for (int z = box.minZ(); z <= box.maxZ(); z++) {
+            for (int x = box.minX(); x <= box.maxX(); x++) {
+                for (HeightmapType type : HeightmapType.values()) {
+                    changedHeights.get(type)[HeightmapCodec.column(x, z)] = columnHeight(changed, x, z, type, traits);
+                }
+            }
         }
         return new VirtualChunk(key, shape, changed, changedHeights);
+    }
+
+    private ChunkSection fillSection(int sectionIndex, LocalBox box, int state, BlockStateTraits traits) {
+        ChunkSection section = sections.get(sectionIndex);
+        int sectionMinY = shape.minY() + sectionIndex * 16;
+        int fromY = Math.max(box.minY(), sectionMinY) - sectionMinY;
+        int toY = Math.min(box.maxY(), sectionMinY + 15) - sectionMinY;
+        boolean placesAir = traits.isAir(state);
+        int[] states = null;
+        int nonAir = section.nonAirCount();
+        for (int y = fromY; y <= toY; y++) {
+            for (int z = box.minZ(); z <= box.maxZ(); z++) {
+                for (int x = box.minX(); x <= box.maxX(); x++) {
+                    int index = ChunkSection.blockIndex(x, y, z);
+                    int previous = states == null ? section.states().get(index) : states[index];
+                    if (previous == state) {
+                        continue;
+                    }
+                    if (states == null) {
+                        states = section.states().toArray();
+                    }
+                    states[index] = state;
+                    nonAir += (traits.isAir(previous) ? 0 : -1) + (placesAir ? 0 : 1);
+                }
+            }
+        }
+        if (states == null) {
+            return section;
+        }
+        return new ChunkSection(PalettedValues.of(states, section.states().format()), section.biomes(), nonAir);
     }
 
     private static int columnHeight(List<ChunkSection> sections, int x, int z, HeightmapType type, BlockStateTraits traits) {

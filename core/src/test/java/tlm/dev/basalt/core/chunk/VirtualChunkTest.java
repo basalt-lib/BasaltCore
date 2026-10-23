@@ -66,6 +66,42 @@ class VirtualChunkTest {
     }
 
     @Test
+    void fillsABoxAcrossSectionsInOneCopy() {
+        VirtualChunk filled = platform.filled(new LocalBox(0, -50, 0, 15, -47, 1), TestBlocks.STONE, TRAITS);
+
+        assertEquals(2 + 16 * 4 * 2, filled.nonAirCount());
+        assertEquals(16 * 2 * 2 + 2, filled.sections().get(0).nonAirCount());
+        assertEquals(16 * 2 * 2, filled.sections().get(1).nonAirCount());
+        assertEquals(TestBlocks.STONE, filled.stateAt(15, -47, 1));
+        assertEquals(TestBlocks.AIR, filled.stateAt(15, -47, 2));
+        assertSame(platform.sections().get(2), filled.sections().get(2));
+        assertEquals(18, filled.heights().get(HeightmapType.MOTION_BLOCKING)[HeightmapCodec.column(7, 1)]);
+        assertEquals(0, filled.heights().get(HeightmapType.MOTION_BLOCKING)[HeightmapCodec.column(7, 2)]);
+    }
+
+    @Test
+    void fillingWithAirEmptiesTheBox() {
+        VirtualChunk cleared = platform.filled(new LocalBox(0, -64, 0, 15, 319, 15), TestBlocks.AIR, TRAITS);
+
+        assertEquals(0, cleared.nonAirCount());
+        assertEquals(0, cleared.heights().get(HeightmapType.WORLD_SURFACE)[HeightmapCodec.column(3, 4)]);
+    }
+
+    @Test
+    void fillReturnsItselfWhenEveryBlockAlreadyMatches() {
+        assertSame(platform, platform.filled(new LocalBox(5, 100, 5, 9, 120, 9), TestBlocks.AIR, TRAITS));
+    }
+
+    @Test
+    void refusesALocalBoxOutsideTheChunkColumns() {
+        assertThrows(IndexOutOfBoundsException.class, () -> new LocalBox(0, 0, 0, 16, 0, 0));
+        assertThrows(IndexOutOfBoundsException.class, () -> new LocalBox(-1, 0, 0, 3, 0, 0));
+        assertThrows(IllegalArgumentException.class, () -> new LocalBox(3, 0, 0, 2, 0, 0));
+        assertThrows(IndexOutOfBoundsException.class,
+                () -> platform.filled(new LocalBox(0, 300, 0, 0, 320, 0), TestBlocks.STONE, TRAITS));
+    }
+
+    @Test
     void holdsOnlyItsOwnColumnsAndHeight() {
         assertTrue(platform.holds(0, -64, 0));
         assertTrue(platform.holds(15, 319, 15));

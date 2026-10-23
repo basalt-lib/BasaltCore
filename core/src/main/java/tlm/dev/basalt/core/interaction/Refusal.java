@@ -15,5 +15,7 @@ public enum Refusal {
     TARGET_NOT_VIRTUAL,
     NOT_REPLACEABLE,
     OBSTRUCTED,
-    NO_EFFECT
+    NO_EFFECT,
+    NO_ENTITY,
+    HIT_TOO_SOON
 }

@@ -1,6 +1,7 @@
 interaction:
   max-actions-per-second: 20
   reach-margin: 1.0
+  entity-reach-margin: 3.0
 visibility:
   entity-scan-interval-ticks: 5
   max-entities-per-scan: 256

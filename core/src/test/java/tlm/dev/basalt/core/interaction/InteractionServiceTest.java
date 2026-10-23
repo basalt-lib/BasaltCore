@@ -12,6 +12,8 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InteractionServiceTest {
 
@@ -21,11 +23,15 @@ class InteractionServiceTest {
     private static final BlockPosition ABOVE = new BlockPosition(1029, -57, 1029);
     private static final Point TOP = new Point(1029.5, -57.0, 1029.5);
     private static final float BASALT_WITH_WOODEN_PICKAXE = 2.0F / 1.25F / 30;
+    private static final int ZOMBIE = 1001;
+    private static final int FAR = 1002;
+    private static final EntityTarget NEAR_ZOMBIE = new EntityTarget(new Point(1029.5, -60, 1029.5), 0.6, 1.95);
 
     private final FakeInteractionWorld world = new FakeInteractionWorld();
     private final FakePlayerBlocks blocks = new FakePlayerBlocks();
     private final FakeReplies replies = new FakeReplies();
-    private InteractionService service = new InteractionService(new InteractionTools(world, blocks, replies), new InteractionSettings(20, 1.0));
+    private final FakePlayerEntities entities = new FakePlayerEntities();
+    private InteractionService service = new InteractionService(new InteractionTools(world, blocks, entities, replies), new InteractionSettings(20, 1.0, 3.0));
 
     @BeforeEach
     void placeTheBasalt() {
@@ -217,7 +223,7 @@ class InteractionServiceTest {
 
     @Test
     void ignoresABurstOverTheBudget() {
-        service = new InteractionService(new InteractionTools(world, blocks, replies), new InteractionSettings(2, 1.0));
+        service = new InteractionService(new InteractionTools(world, blocks, entities, replies), new InteractionSettings(2, 1.0, 3.0));
         world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
 
         service.handle(A, use(BLOCK, BlockFace.UP, TOP, 1));
@@ -252,15 +258,73 @@ class InteractionServiceTest {
         assertEquals(Optional.of(Refusal.NOT_BREAKING), service.handle(A, stop(BLOCK, 2)).refusal());
     }
 
+    @Test
+    void attacksAndUsesAVirtualEntityInReachWithoutAnyReplyOfItsOwn() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        entities.targets.put(ZOMBIE, NEAR_ZOMBIE);
+
+        assertEquals(Optional.empty(), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
+        assertEquals(Optional.empty(), service.handle(A, EntityRequest.interact(ZOMBIE, Hand.OFF)).refusal());
+        assertEquals(Optional.empty(), service.handle(A, EntityRequest.interactAt(ZOMBIE, Hand.MAIN, new Point(0.1, 1.2, -0.3))).refusal());
+
+        assertEquals(List.of("attack #1001", "use #1001", "use #1001"), entities.calls);
+        assertEquals(List.of(), replies.sent);
+    }
+
+    @Test
+    void refusesEntityInteractionsWithoutEffect() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        entities.targets.put(ZOMBIE, NEAR_ZOMBIE);
+        entities.targets.put(FAR, new EntityTarget(new Point(1029.5, -60, 1040.5), 0.6, 1.95));
+
+        assertEquals(Optional.of(Refusal.NO_ENTITY), service.handle(A, EntityRequest.attack(4242)).refusal());
+        assertEquals(Optional.of(Refusal.OUT_OF_REACH), service.handle(A, EntityRequest.attack(FAR)).refusal());
+        assertEquals(Optional.of(Refusal.MALFORMED), service.handle(A, EntityRequest.interactAt(ZOMBIE, Hand.MAIN, new Point(Double.NaN, 0, 0))).refusal());
+        assertEquals(Optional.of(Refusal.MALFORMED), service.handle(A, EntityRequest.interactAt(ZOMBIE, Hand.MAIN, new Point(0, 65, 0))).refusal());
+        entities.nextHit = EntityHit.TOO_SOON;
+        assertEquals(Optional.of(Refusal.HIT_TOO_SOON), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
+        entities.nextHit = EntityHit.GONE;
+        assertEquals(Optional.of(Refusal.NO_ENTITY), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
+        world.stand(A, GameMode.SPECTATOR, 100, OptionalInt.empty());
+        assertEquals(Optional.of(Refusal.GAME_MODE), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
+        assertEquals(Optional.of(Refusal.PLAYER_GONE), service.handle(B, EntityRequest.attack(ZOMBIE)).refusal());
+
+        assertEquals(List.of("attack #1001", "attack #1001"), entities.calls);
+        assertEquals(List.of(), replies.sent);
+    }
+
+    @Test
+    void sharesTheBudgetBetweenBlocksAndEntities() {
+        service = new InteractionService(new InteractionTools(world, blocks, entities, replies), new InteractionSettings(2, 1.0, 3.0));
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        entities.targets.put(ZOMBIE, NEAR_ZOMBIE);
+
+        service.handle(A, use(BLOCK, BlockFace.UP, TOP, 1));
+        service.handle(A, EntityRequest.attack(ZOMBIE));
+
+        assertEquals(Optional.of(Refusal.OVER_BUDGET), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
+        assertEquals(List.of("attack #1001"), entities.calls);
+    }
+
+    @Test
+    void reachesAnEntityByItsBoxWithTheEntityRangeAndItsMargin() {
+        EntityTarget zombie = new EntityTarget(new Point(0.5, 0, 0.5), 0.6, 1.95);
+
+        assertEquals(0.0, zombie.distanceSquaredFrom(new Point(0.5, 1.62, 0.7)));
+        assertEquals(4.0, zombie.distanceSquaredFrom(new Point(2.8, 1.0, 0.5)), 1e-9);
+        assertTrue(InteractionValidator.withinEntityReach(new Point(6.7, 1.0, 0.5), zombie, 3.0, 3.0));
+        assertFalse(InteractionValidator.withinEntityReach(new Point(6.81, 1.0, 0.5), zombie, 3.0, 3.0));
+    }
+
     private static InteractionRequest start(BlockPosition position, int sequence) {
-        return InteractionRequest.breaking(InteractionKind.START_BREAK, position, BlockFace.NORTH, sequence);
+        return BlockRequest.breaking(InteractionKind.START_BREAK, position, BlockFace.NORTH, sequence);
     }
 
     private static InteractionRequest stop(BlockPosition position, int sequence) {
-        return InteractionRequest.breaking(InteractionKind.STOP_BREAK, position, BlockFace.NORTH, sequence);
+        return BlockRequest.breaking(InteractionKind.STOP_BREAK, position, BlockFace.NORTH, sequence);
     }
 
     private static InteractionRequest use(BlockPosition position, BlockFace face, Point hit, int sequence) {
-        return InteractionRequest.using(position, face, hit, Hand.MAIN, sequence);
+        return BlockRequest.using(position, face, hit, Hand.MAIN, sequence);
     }
 }

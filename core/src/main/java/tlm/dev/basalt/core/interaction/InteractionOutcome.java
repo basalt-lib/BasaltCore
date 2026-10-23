@@ -25,6 +25,10 @@ public record InteractionOutcome(List<BlockChange> changes, Optional<Refusal> re
         return new InteractionOutcome(changes, Optional.empty(), updates, resyncInventory, OptionalInt.of(sequence));
     }
 
+    public static InteractionOutcome done() {
+        return new InteractionOutcome(List.of(), Optional.empty(), List.of(), false, OptionalInt.empty());
+    }
+
     public static InteractionOutcome refused(Refusal refusal, List<BlockChange> updates, boolean resyncInventory, int sequence) {
         return new InteractionOutcome(List.of(), Optional.of(refusal), updates, resyncInventory, OptionalInt.of(sequence));
     }

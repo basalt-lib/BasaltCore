@@ -23,23 +23,24 @@ class InteractionSettingsParserTest {
         Map<String, String> entries = ShippedConfig.entries();
         assertEquals("20", entries.get(InteractionSettingsParser.MAX_ACTIONS_PER_SECOND));
         assertEquals("1.0", entries.get(InteractionSettingsParser.REACH_MARGIN));
-        assertEquals(new InteractionSettings(20, 1.0), parse(Map.of()));
+        assertEquals("3.0", entries.get(InteractionSettingsParser.ENTITY_REACH_MARGIN));
+        assertEquals(new InteractionSettings(20, 1.0, 3.0), parse(Map.of()));
         assertTrue(warnings.isEmpty());
     }
 
     @Test
     void readsTheServerValues() throws IOException {
-        assertEquals(new InteractionSettings(40, 0.5), parse(Map.of(
+        assertEquals(new InteractionSettings(40, 0.5, 3.0), parse(Map.of(
                 InteractionSettingsParser.MAX_ACTIONS_PER_SECOND, 40, InteractionSettingsParser.REACH_MARGIN, 0.5)));
-        assertEquals(new InteractionSettings(20, 2.0), parse(Map.of(InteractionSettingsParser.REACH_MARGIN, 2)));
+        assertEquals(new InteractionSettings(20, 2.0, 3.0), parse(Map.of(InteractionSettingsParser.REACH_MARGIN, 2)));
         assertTrue(warnings.isEmpty());
     }
 
     @Test
     void keepsTheShippedValueForABadOneAndSaysWhere() throws IOException {
-        assertEquals(new InteractionSettings(20, 1.0), parse(Map.of(
+        assertEquals(new InteractionSettings(20, 1.0, 3.0), parse(Map.of(
                 InteractionSettingsParser.MAX_ACTIONS_PER_SECOND, 0, InteractionSettingsParser.REACH_MARGIN, "lots")));
-        assertEquals(new InteractionSettings(20, 1.0), parse(Map.of(
+        assertEquals(new InteractionSettings(20, 1.0, 3.0), parse(Map.of(
                 InteractionSettingsParser.MAX_ACTIONS_PER_SECOND, 2.5, InteractionSettingsParser.REACH_MARGIN, 17)));
 
         assertEquals(4, warnings.size());

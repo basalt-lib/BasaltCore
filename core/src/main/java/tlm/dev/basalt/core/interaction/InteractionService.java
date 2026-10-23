@@ -28,21 +28,57 @@ public final class InteractionService {
             return InteractionOutcome.ignored(Refusal.PLAYER_GONE);
         }
         PlayerInteractions state = players.computeIfAbsent(player, id -> new PlayerInteractions(settings.maxActionsPerSecond()));
+        return switch (request) {
+            case BlockRequest block -> handleBlock(player, block, context.get(), state);
+            case EntityRequest entity -> handleEntity(player, entity, context.get(), state);
+        };
+    }
+
+    private InteractionOutcome handleEntity(UUID player, EntityRequest request, InteractionContext context, PlayerInteractions state) {
+        Optional<Refusal> malformed = InteractionValidator.screen(request);
+        if (malformed.isPresent()) {
+            return InteractionOutcome.ignored(malformed.get());
+        }
+        if (!state.budget().take(context.tick())) {
+            return InteractionOutcome.ignored(Refusal.OVER_BUDGET);
+        }
+        if (!context.mode().touchesEntities()) {
+            return InteractionOutcome.ignored(Refusal.GAME_MODE);
+        }
+        Optional<EntityTarget> target = tools.entities().target(player, request.entity());
+        if (target.isEmpty()) {
+            return InteractionOutcome.ignored(Refusal.NO_ENTITY);
+        }
+        if (!InteractionValidator.withinEntityReach(context.stance().eyes(), target.get(),
+                context.stance().reach().entities(), settings.entityReachMargin())) {
+            return InteractionOutcome.ignored(Refusal.OUT_OF_REACH);
+        }
+        if (request.action() != EntityAction.ATTACK) {
+            return tools.entities().use(player, request.entity()) ? InteractionOutcome.done() : InteractionOutcome.ignored(Refusal.NO_ENTITY);
+        }
+        return switch (tools.entities().attack(player, request.entity())) {
+            case HURT, KILLED -> InteractionOutcome.done();
+            case TOO_SOON -> InteractionOutcome.ignored(Refusal.HIT_TOO_SOON);
+            case GONE -> InteractionOutcome.ignored(Refusal.NO_ENTITY);
+        };
+    }
+
+    private InteractionOutcome handleBlock(UUID player, BlockRequest request, InteractionContext context, PlayerInteractions state) {
         Optional<Refusal> malformed = InteractionValidator.screen(request, state.lastSequence());
         if (malformed.isPresent()) {
             return InteractionOutcome.ignored(malformed.get());
         }
-        if (!state.budget().take(context.get().tick())) {
+        if (!state.budget().take(context.tick())) {
             return InteractionOutcome.ignored(Refusal.OVER_BUDGET);
         }
         if (request.kind().predictsBlocks()) {
             state.sequenced(request.sequence());
         }
         InteractionOutcome outcome = switch (request.kind()) {
-            case START_BREAK -> startBreak(player, request, context.get(), state.breaks());
-            case STOP_BREAK -> stopBreak(player, request, context.get(), state.breaks());
-            case ABORT_BREAK -> abortBreak(request, context.get(), state.breaks());
-            case USE_ON -> useOn(player, request, context.get());
+            case START_BREAK -> startBreak(player, request, context, state.breaks());
+            case STOP_BREAK -> stopBreak(player, request, context, state.breaks());
+            case ABORT_BREAK -> abortBreak(request, context, state.breaks());
+            case USE_ON -> useOn(player, request, context);
         };
         send(player, outcome);
         return outcome;
@@ -63,7 +99,7 @@ public final class InteractionService {
         return players.size();
     }
 
-    private InteractionOutcome startBreak(UUID player, InteractionRequest request, InteractionContext context, BreakTracker breaks) {
+    private InteractionOutcome startBreak(UUID player, BlockRequest request, InteractionContext context, BreakTracker breaks) {
         BlockPosition position = request.position();
         OptionalInt current = tools.blocks().stateAt(player, position);
         if (current.isEmpty()) {
@@ -89,7 +125,7 @@ public final class InteractionService {
         return InteractionOutcome.accepted(List.of(), updates, false, request.sequence());
     }
 
-    private InteractionOutcome stopBreak(UUID player, InteractionRequest request, InteractionContext context, BreakTracker breaks) {
+    private InteractionOutcome stopBreak(UUID player, BlockRequest request, InteractionContext context, BreakTracker breaks) {
         BlockPosition position = request.position();
         OptionalInt current = tools.blocks().stateAt(player, position);
         if (current.isEmpty()) {
@@ -109,7 +145,7 @@ public final class InteractionService {
         };
     }
 
-    private InteractionOutcome abortBreak(InteractionRequest request, InteractionContext context, BreakTracker breaks) {
+    private InteractionOutcome abortBreak(BlockRequest request, InteractionContext context, BreakTracker breaks) {
         if (!inReach(context, request.position())) {
             return InteractionOutcome.refused(Refusal.OUT_OF_REACH, List.of(), false, request.sequence());
         }
@@ -117,7 +153,7 @@ public final class InteractionService {
         return InteractionOutcome.accepted(List.of(), List.of(), false, request.sequence());
     }
 
-    private InteractionOutcome useOn(UUID player, InteractionRequest request, InteractionContext context) {
+    private InteractionOutcome useOn(UUID player, BlockRequest request, InteractionContext context) {
         BlockPosition clicked = request.position();
         Point hit = request.hit().orElseThrow();
         if (!InteractionValidator.hitInsideBlock(hit, clicked)) {
@@ -190,7 +226,7 @@ public final class InteractionService {
     }
 
     private boolean inReach(InteractionContext context, BlockPosition position) {
-        return InteractionValidator.withinReach(context.stance().eyes(), position, context.stance().reach(), settings.reachMargin());
+        return InteractionValidator.withinReach(context.stance().eyes(), position, context.stance().reach().blocks(), settings.reachMargin());
     }
 
     private float progress(UUID player, BlockPosition position, int state, InteractionContext context) {

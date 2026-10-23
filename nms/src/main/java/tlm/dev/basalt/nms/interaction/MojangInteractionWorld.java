@@ -20,6 +20,7 @@ import tlm.dev.basalt.core.interaction.Hand;
 import tlm.dev.basalt.core.interaction.InteractionContext;
 import tlm.dev.basalt.core.interaction.InteractionWorld;
 import tlm.dev.basalt.core.interaction.PlayerStance;
+import tlm.dev.basalt.core.interaction.Reach;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.Point;
 
@@ -49,7 +50,8 @@ public final class MojangInteractionWorld implements InteractionWorld {
             };
             ItemStack held = online.getItemInHand(hand == Hand.MAIN ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
             PlayerStance stance = new PlayerStance(new Point(eyes.x, eyes.y, eyes.z),
-                    new Point(online.getX(), online.getY(), online.getZ()), online.onGround(), online.blockInteractionRange());
+                    new Point(online.getX(), online.getY(), online.getZ()), online.onGround(),
+                    new Reach(online.blockInteractionRange(), online.entityInteractionRange()));
             return new InteractionContext(online.level().getLagCompensationTick(), mode, stance, placeableBlock(held));
         });
     }

@@ -24,7 +24,7 @@ final class FakeInteractionWorld implements InteractionWorld {
     final Set<BlockPosition> occupied = new HashSet<>();
 
     void stand(UUID player, GameMode mode, long tick, OptionalInt heldBlock) {
-        PlayerStance stance = new PlayerStance(new Point(1029.5, -58.38, 1027.5), new Point(1029.5, -60.0, 1027.5), true, 4.5);
+        PlayerStance stance = new PlayerStance(new Point(1029.5, -58.38, 1027.5), new Point(1029.5, -60.0, 1027.5), true, new Reach(4.5, 3.0));
         contexts.put(player, new InteractionContext(tick, mode, stance, heldBlock));
     }
 

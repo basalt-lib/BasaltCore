@@ -9,4 +9,8 @@ public enum GameMode {
     public boolean changesBlocks() {
         return this == SURVIVAL || this == CREATIVE;
     }
+
+    public boolean touchesEntities() {
+        return this != SPECTATOR;
+    }
 }

@@ -7,10 +7,10 @@ import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import tlm.dev.basalt.core.interaction.BlockRequest;
 import tlm.dev.basalt.core.interaction.Hand;
 import tlm.dev.basalt.core.interaction.InteractionInbox;
 import tlm.dev.basalt.core.interaction.InteractionKind;
-import tlm.dev.basalt.core.interaction.InteractionRequest;
 import tlm.dev.basalt.core.position.BlockFace;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.Point;
@@ -39,7 +39,7 @@ public final class InteractionPacketReader implements InboundGate {
 
     @Override
     public boolean consumes(Object message) {
-        Optional<InteractionRequest> request = switch (message) {
+        Optional<BlockRequest> request = switch (message) {
             case ServerboundPlayerActionPacket action -> breaking(action);
             case ServerboundUseItemOnPacket use -> using(use);
             default -> Optional.empty();
@@ -47,7 +47,7 @@ public final class InteractionPacketReader implements InboundGate {
         if (request.isEmpty()) {
             return false;
         }
-        InteractionRequest read = request.get();
+        BlockRequest read = request.get();
         InboundKind kind = read.kind() == InteractionKind.USE_ON ? InboundKind.USE_ON : InboundKind.BLOCK_ACTION;
         if (InboundFilter.decide(InboundFacts.about(kind, read.position(), read.face()), view.snapshot()) == InboundVerdict.PASS) {
             return false;
@@ -56,7 +56,7 @@ public final class InteractionPacketReader implements InboundGate {
         return true;
     }
 
-    private static Optional<InteractionRequest> breaking(ServerboundPlayerActionPacket packet) {
+    private static Optional<BlockRequest> breaking(ServerboundPlayerActionPacket packet) {
         InteractionKind kind = switch (packet.getAction()) {
             case START_DESTROY_BLOCK -> InteractionKind.START_BREAK;
             case ABORT_DESTROY_BLOCK -> InteractionKind.ABORT_BREAK;
@@ -67,14 +67,14 @@ public final class InteractionPacketReader implements InboundGate {
             return Optional.empty();
         }
         return position(packet.getPos())
-                .map(position -> InteractionRequest.breaking(kind, position, face(packet.getDirection()), packet.getSequence()));
+                .map(position -> BlockRequest.breaking(kind, position, face(packet.getDirection()), packet.getSequence()));
     }
 
-    private static Optional<InteractionRequest> using(ServerboundUseItemOnPacket packet) {
+    private static Optional<BlockRequest> using(ServerboundUseItemOnPacket packet) {
         BlockHitResult hit = packet.getHitResult();
         Vec3 location = hit.getLocation();
         Hand hand = packet.getHand() == InteractionHand.MAIN_HAND ? Hand.MAIN : Hand.OFF;
-        return position(hit.getBlockPos()).map(position -> InteractionRequest.using(
+        return position(hit.getBlockPos()).map(position -> BlockRequest.using(
                 position, face(hit.getDirection()), new Point(location.x, location.y, location.z), hand, packet.getSequence()));
     }
 

@@ -10,11 +10,12 @@ public final class InteractionValidator {
     public static final double HIT_TOLERANCE = 1.0000001;
     public static final float STOP_THRESHOLD = 0.7F;
     public static final float FULL_PROGRESS = 1.0F;
+    public static final double MAX_INTERACTION_OFFSET = 64;
 
     private InteractionValidator() {
     }
 
-    public static Optional<Refusal> screen(InteractionRequest request, int lastSequence) {
+    public static Optional<Refusal> screen(BlockRequest request, int lastSequence) {
         if (request.sequence() < 0) {
             return Optional.of(Refusal.MALFORMED);
         }
@@ -35,6 +36,18 @@ public final class InteractionValidator {
         return dx * dx + dy * dy + dz * dz < limit * limit;
     }
 
+    public static Optional<Refusal> screen(EntityRequest request) {
+        if (request.at().isPresent() && !withinBox(request.at().get())) {
+            return Optional.of(Refusal.MALFORMED);
+        }
+        return Optional.empty();
+    }
+
+    public static boolean withinEntityReach(Point eyes, EntityTarget target, double reach, double margin) {
+        double limit = reach + margin;
+        return target.distanceSquaredFrom(eyes) < limit * limit;
+    }
+
     public static boolean hitInsideBlock(Point hit, BlockPosition block) {
         Point center = Point.centerOf(block);
         return Math.abs(hit.x() - center.x()) < HIT_TOLERANCE
@@ -52,6 +65,11 @@ public final class InteractionValidator {
 
     public static boolean breaksWhenDelayed(float progressPerTick, long elapsedTicks) {
         return progressPerTick * (elapsedTicks + 1) >= FULL_PROGRESS;
+    }
+
+    private static boolean withinBox(Point at) {
+        return at.isFinite() && Math.abs(at.x()) <= MAX_INTERACTION_OFFSET && Math.abs(at.y()) <= MAX_INTERACTION_OFFSET
+                && Math.abs(at.z()) <= MAX_INTERACTION_OFFSET;
     }
 
     private static double gap(double coordinate, int blockMin) {

@@ -20,13 +20,13 @@ class InteractionValidatorTest {
 
     @Test
     void ignoresNegativeAndOldSequencesAndBadHitPoints() {
-        assertEquals(Optional.of(Refusal.MALFORMED), screen(InteractionRequest.breaking(InteractionKind.START_BREAK, BLOCK, BlockFace.UP, -1), 0));
-        assertEquals(Optional.of(Refusal.MALFORMED), screen(InteractionRequest.breaking(InteractionKind.STOP_BREAK, BLOCK, BlockFace.UP, 4), 4));
-        assertEquals(Optional.of(Refusal.MALFORMED), screen(InteractionRequest.using(BLOCK, BlockFace.UP, new Point(Double.NaN, 0, 0), Hand.MAIN, 9), 4));
-        assertEquals(Optional.of(Refusal.MALFORMED), screen(InteractionRequest.breaking(InteractionKind.ABORT_BREAK, BLOCK, BlockFace.UP, -3), 4));
-        assertEquals(Optional.empty(), screen(InteractionRequest.breaking(InteractionKind.ABORT_BREAK, BLOCK, BlockFace.UP, 0), 4));
-        assertEquals(Optional.empty(), screen(InteractionRequest.breaking(InteractionKind.START_BREAK, BLOCK, BlockFace.UP, 0), -1));
-        assertEquals(Optional.empty(), screen(InteractionRequest.using(BLOCK, BlockFace.UP, new Point(1029.5, -57, 1029.5), Hand.OFF, 5), 4));
+        assertEquals(Optional.of(Refusal.MALFORMED), screen(BlockRequest.breaking(InteractionKind.START_BREAK, BLOCK, BlockFace.UP, -1), 0));
+        assertEquals(Optional.of(Refusal.MALFORMED), screen(BlockRequest.breaking(InteractionKind.STOP_BREAK, BLOCK, BlockFace.UP, 4), 4));
+        assertEquals(Optional.of(Refusal.MALFORMED), screen(BlockRequest.using(BLOCK, BlockFace.UP, new Point(Double.NaN, 0, 0), Hand.MAIN, 9), 4));
+        assertEquals(Optional.of(Refusal.MALFORMED), screen(BlockRequest.breaking(InteractionKind.ABORT_BREAK, BLOCK, BlockFace.UP, -3), 4));
+        assertEquals(Optional.empty(), screen(BlockRequest.breaking(InteractionKind.ABORT_BREAK, BLOCK, BlockFace.UP, 0), 4));
+        assertEquals(Optional.empty(), screen(BlockRequest.breaking(InteractionKind.START_BREAK, BLOCK, BlockFace.UP, 0), -1));
+        assertEquals(Optional.empty(), screen(BlockRequest.using(BLOCK, BlockFace.UP, new Point(1029.5, -57, 1029.5), Hand.OFF, 5), 4));
     }
 
     @Test
@@ -66,7 +66,7 @@ class InteractionValidatorTest {
         assertFalse(InteractionValidator.breaksAtOnce(0.99F));
     }
 
-    private static Optional<Refusal> screen(InteractionRequest request, int lastSequence) {
+    private static Optional<Refusal> screen(BlockRequest request, int lastSequence) {
         return InteractionValidator.screen(request, lastSequence);
     }
 }

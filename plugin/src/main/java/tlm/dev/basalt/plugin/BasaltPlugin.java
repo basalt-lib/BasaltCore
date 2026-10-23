@@ -4,9 +4,12 @@ import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import tlm.dev.basalt.api.BasaltProvider;
+import tlm.dev.basalt.core.interaction.EntityHit;
+import tlm.dev.basalt.core.interaction.EntityTarget;
 import tlm.dev.basalt.core.interaction.InteractionService;
 import tlm.dev.basalt.core.interaction.InteractionSettings;
 import tlm.dev.basalt.core.interaction.InteractionTools;
+import tlm.dev.basalt.core.interaction.PlayerEntities;
 import tlm.dev.basalt.core.platform.GameVersion;
 import tlm.dev.basalt.core.visibility.ChunkViews;
 import tlm.dev.basalt.core.visibility.EntityMaskSettings;
@@ -39,8 +42,27 @@ import tlm.dev.basalt.plugin.masking.EntityTrackListener;
 import tlm.dev.basalt.plugin.masking.MaskedViewers;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public final class BasaltPlugin extends JavaPlugin {
+
+    private static final PlayerEntities NO_ENTITIES = new PlayerEntities() {
+        @Override
+        public Optional<EntityTarget> target(UUID player, int entity) {
+            return Optional.empty();
+        }
+
+        @Override
+        public EntityHit attack(UUID player, int entity) {
+            return EntityHit.GONE;
+        }
+
+        @Override
+        public boolean use(UUID player, int entity) {
+            return false;
+        }
+    };
 
     private LifecycleManager lifecycle;
 
@@ -56,7 +78,7 @@ public final class BasaltPlugin extends JavaPlugin {
         MaskedViewers masks = new MaskedViewers(this, new EntityMasking(maskSettings.maxEntitiesPerScan()));
         ChunkViews views = MojangChunkViews.create(getServer(), queues, masks);
         InteractionService interactions = new InteractionService(new InteractionTools(
-                MojangInteractions.world(getServer()), new ViewBlocks(views), MojangInteractions.replies(getServer())), settings);
+                MojangInteractions.world(getServer()), new ViewBlocks(views), NO_ENTITIES, MojangInteractions.replies(getServer())), settings);
         BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion());
         FlyingKickListener flyingKicks = new FlyingKickListener(views, getLogger());
         lifecycle = new LifecycleManager(List.of(

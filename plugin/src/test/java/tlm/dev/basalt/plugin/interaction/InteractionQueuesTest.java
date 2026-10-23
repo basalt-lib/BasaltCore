@@ -1,6 +1,8 @@
 package tlm.dev.basalt.plugin.interaction;
 
 import org.junit.jupiter.api.Test;
+import tlm.dev.basalt.core.interaction.BlockRequest;
+import tlm.dev.basalt.core.interaction.EntityRequest;
 import tlm.dev.basalt.core.interaction.InteractionKind;
 import tlm.dev.basalt.core.interaction.InteractionRequest;
 import tlm.dev.basalt.core.position.BlockFace;
@@ -30,7 +32,7 @@ class InteractionQueuesTest {
         assertFalse(queues.offer(A, request(3)));
         assertTrue(queues.offer(B, request(1)));
 
-        queues.drainEach((player, request) -> handled.add(player.toString().substring(35) + " " + request.sequence()));
+        queues.drainEach((player, request) -> handled.add(player.toString().substring(35) + " " + label(request)));
 
         assertEquals(List.of("a 1", "a 2", "b 1"), handled.stream().sorted().toList());
     }
@@ -39,9 +41,9 @@ class InteractionQueuesTest {
     void handsEachRequestOnceInOrder() {
         queues.offer(A, request(1));
         queues.offer(A, request(2));
-        queues.drainEach((player, request) -> handled.add("first " + request.sequence()));
+        queues.drainEach((player, request) -> handled.add("first " + label(request)));
         queues.offer(A, request(3));
-        queues.drainEach((player, request) -> handled.add("second " + request.sequence()));
+        queues.drainEach((player, request) -> handled.add("second " + label(request)));
 
         assertEquals(List.of("first 1", "first 2", "second 3"), handled);
     }
@@ -57,7 +59,24 @@ class InteractionQueuesTest {
         assertThrows(IllegalArgumentException.class, () -> new InteractionQueues(0));
     }
 
+    @Test
+    void keepsBlockAndEntityRequestsInOneQueue() {
+        queues.offer(A, request(1));
+        queues.offer(A, EntityRequest.attack(1001));
+
+        queues.drainEach((player, request) -> handled.add(label(request)));
+
+        assertEquals(List.of("1", "attack 1001"), handled);
+    }
+
+    private static String label(InteractionRequest request) {
+        return switch (request) {
+            case BlockRequest block -> String.valueOf(block.sequence());
+            case EntityRequest entity -> "attack " + entity.entity();
+        };
+    }
+
     private static InteractionRequest request(int sequence) {
-        return InteractionRequest.breaking(InteractionKind.START_BREAK, new BlockPosition(1029, -58, 1029), BlockFace.UP, sequence);
+        return BlockRequest.breaking(InteractionKind.START_BREAK, new BlockPosition(1029, -58, 1029), BlockFace.UP, sequence);
     }
 }

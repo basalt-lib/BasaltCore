@@ -28,8 +28,8 @@ public final class ViewEntities implements PlayerEntities {
     }
 
     @Override
-    public EntityHit attack(UUID player, int entity) {
-        return switch (entities.attack(player, entity)) {
+    public EntityHit attack(UUID player, int entity, double damage) {
+        return switch (entities.attack(player, entity, damage)) {
             case HURT -> EntityHit.HURT;
             case KILLED -> EntityHit.KILLED;
             case TOO_SOON -> EntityHit.TOO_SOON;

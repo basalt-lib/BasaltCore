@@ -95,6 +95,11 @@ public final class ChunkViewService implements ChunkViews {
     }
 
     @Override
+    public boolean awaits(UUID player, ChunkKey chunk) {
+        return pending.getOrDefault(player, Set.of()).contains(chunk);
+    }
+
+    @Override
     public int sendRequested(int budget) {
         requests.drain((player, chunk) -> snapshot(player).filter(snapshot -> snapshot.hides(chunk))
                 .ifPresent(snapshot -> pending.computeIfAbsent(player, id -> new LinkedHashSet<>()).add(chunk)));

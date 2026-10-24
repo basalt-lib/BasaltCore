@@ -18,18 +18,18 @@ class EntitySettingsParserTest {
     private final List<String> warnings = new ArrayList<>();
 
     @Test
-    void shipsSixteenEntitiesPerPlayer() throws IOException {
-        assertEquals("16", ShippedConfig.entries().get(EntitySettingsParser.MAX_PER_PLAYER));
+    void shipsSixteenEntitiesPerWorld() throws IOException {
+        assertEquals("16", ShippedConfig.entries().get(EntitySettingsParser.MAX_PER_WORLD));
         assertEquals(new EntitySettings(16), parse(Map.of()));
         assertTrue(warnings.isEmpty());
     }
 
     @Test
     void readsTheServerValueAndRefusesABadOne() throws IOException {
-        assertEquals(new EntitySettings(4), parse(Map.of(EntitySettingsParser.MAX_PER_PLAYER, 4)));
-        assertEquals(new EntitySettings(16), parse(Map.of(EntitySettingsParser.MAX_PER_PLAYER, 5000)));
+        assertEquals(new EntitySettings(4), parse(Map.of(EntitySettingsParser.MAX_PER_WORLD, 4)));
+        assertEquals(new EntitySettings(16), parse(Map.of(EntitySettingsParser.MAX_PER_WORLD, 5000)));
 
-        assertEquals(List.of(PATH + ": entity.max-per-player must be a whole number from 1 to 1024, using 16"), warnings);
+        assertEquals(List.of(PATH + ": entity.max-per-world must be a whole number from 1 to 1024, using 16"), warnings);
     }
 
     private EntitySettings parse(Map<String, Object> server) throws IOException {

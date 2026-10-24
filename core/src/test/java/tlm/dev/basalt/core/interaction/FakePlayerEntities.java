@@ -19,8 +19,8 @@ final class FakePlayerEntities implements PlayerEntities {
     }
 
     @Override
-    public EntityHit attack(UUID player, int entity) {
-        calls.add("attack #" + entity);
+    public EntityHit attack(UUID player, int entity, double damage) {
+        calls.add("attack #" + entity + " for " + damage);
         return nextHit;
     }
 

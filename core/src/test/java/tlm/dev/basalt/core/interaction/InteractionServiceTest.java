@@ -267,7 +267,7 @@ class InteractionServiceTest {
         assertEquals(Optional.empty(), service.handle(A, EntityRequest.interact(ZOMBIE, Hand.OFF)).refusal());
         assertEquals(Optional.empty(), service.handle(A, EntityRequest.interactAt(ZOMBIE, Hand.MAIN, new Point(0.1, 1.2, -0.3))).refusal());
 
-        assertEquals(List.of("attack #1001", "use #1001", "use #1001"), entities.calls);
+        assertEquals(List.of("attack #1001 for 1.0", "use #1001", "use #1001"), entities.calls);
         assertEquals(List.of(), replies.sent);
     }
 
@@ -289,8 +289,21 @@ class InteractionServiceTest {
         assertEquals(Optional.of(Refusal.GAME_MODE), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
         assertEquals(Optional.of(Refusal.PLAYER_GONE), service.handle(B, EntityRequest.attack(ZOMBIE)).refusal());
 
-        assertEquals(List.of("attack #1001", "attack #1001"), entities.calls);
+        assertEquals(List.of("attack #1001 for 1.0", "attack #1001 for 1.0"), entities.calls);
         assertEquals(List.of(), replies.sent);
+    }
+
+    @Test
+    void hitsWithTheAttackDamageOfThePlayerAndAtLeastOne() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        entities.targets.put(ZOMBIE, NEAR_ZOMBIE);
+
+        world.holding(A, 7.0);
+        service.handle(A, EntityRequest.attack(ZOMBIE));
+        world.holding(A, 0.25);
+        service.handle(A, EntityRequest.attack(ZOMBIE));
+
+        assertEquals(List.of("attack #1001 for 7.0", "attack #1001 for 1.0"), entities.calls);
     }
 
     @Test
@@ -303,7 +316,7 @@ class InteractionServiceTest {
         service.handle(A, EntityRequest.attack(ZOMBIE));
 
         assertEquals(Optional.of(Refusal.OVER_BUDGET), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
-        assertEquals(List.of("attack #1001"), entities.calls);
+        assertEquals(List.of("attack #1001 for 1.0"), entities.calls);
     }
 
     @Test

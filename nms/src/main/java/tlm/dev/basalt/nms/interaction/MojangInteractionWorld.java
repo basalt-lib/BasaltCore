@@ -3,6 +3,7 @@ package tlm.dev.basalt.nms.interaction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.EmptyBlockGetter;
@@ -17,6 +18,7 @@ import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import tlm.dev.basalt.core.interaction.GameMode;
 import tlm.dev.basalt.core.interaction.Hand;
+import tlm.dev.basalt.core.interaction.HeldItem;
 import tlm.dev.basalt.core.interaction.InteractionContext;
 import tlm.dev.basalt.core.interaction.InteractionWorld;
 import tlm.dev.basalt.core.interaction.PlayerStance;
@@ -52,7 +54,8 @@ public final class MojangInteractionWorld implements InteractionWorld {
             PlayerStance stance = new PlayerStance(new Point(eyes.x, eyes.y, eyes.z),
                     new Point(online.getX(), online.getY(), online.getZ()), online.onGround(),
                     new Reach(online.blockInteractionRange(), online.entityInteractionRange()));
-            return new InteractionContext(online.level().getLagCompensationTick(), mode, stance, placeableBlock(held));
+            HeldItem item = new HeldItem(placeableBlock(held), online.getAttributeValue(Attributes.ATTACK_DAMAGE));
+            return new InteractionContext(online.level().getLagCompensationTick(), mode, stance, item);
         });
     }
 

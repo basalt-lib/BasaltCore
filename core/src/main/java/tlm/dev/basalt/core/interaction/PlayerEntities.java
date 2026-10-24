@@ -7,7 +7,7 @@ public interface PlayerEntities {
 
     Optional<EntityTarget> target(UUID player, int entity);
 
-    EntityHit attack(UUID player, int entity);
+    EntityHit attack(UUID player, int entity, double damage);
 
     boolean use(UUID player, int entity);
 }

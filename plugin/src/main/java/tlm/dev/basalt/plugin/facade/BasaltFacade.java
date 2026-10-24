@@ -81,10 +81,10 @@ public final class BasaltFacade implements Basalt {
                 yield facade;
             }
             case Creation.Refused refused -> throw switch (refused.reason()) {
-                case TOO_MANY_WORLDS -> new IllegalStateException("at most " + tools.settings().maxWorlds()
+                case TOO_MANY_WORLDS -> new IllegalStateException("at most " + tools.worlds().settings().maxWorlds()
                         + " virtual worlds can be open at once (world.max-worlds)");
                 case TOO_MANY_CHUNKS -> new IllegalArgumentException("the area holds " + area.chunkCount()
-                        + " chunks, a virtual world holds at most " + tools.settings().maxChunks() + " (world.max-chunks)");
+                        + " chunks, a virtual world holds at most " + tools.worlds().settings().maxChunks() + " (world.max-chunks)");
                 case REAL_BLOCKS -> hostArea(world, refused.cause().orElseThrow());
             };
         };

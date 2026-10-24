@@ -25,6 +25,8 @@ public interface ChunkViews {
 
     void request(UUID player, ChunkKey chunk);
 
+    boolean awaits(UUID player, ChunkKey chunk);
+
     int sendRequested(int budget);
 
     void release(UUID world);

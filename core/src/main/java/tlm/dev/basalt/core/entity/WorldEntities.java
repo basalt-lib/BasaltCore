@@ -28,16 +28,20 @@ final class WorldEntities {
         return Set.copyOf(entities.keySet());
     }
 
-    List<Integer> idsInOrder() {
-        return List.copyOf(entities.keySet());
+    List<VirtualEntity> all() {
+        return entities.values().stream().map(Tracked::entity).toList();
     }
 
-    void add(VirtualEntity entity) {
-        entities.put(entity.id(), new Tracked(entity));
+    List<Integer> shownIds() {
+        return entities.values().stream().filter(Tracked::shown).map(tracked -> tracked.entity().id()).toList();
+    }
+
+    Optional<Tracked> tracked(int id) {
+        return Optional.ofNullable(entities.get(id));
     }
 
     Optional<VirtualEntity> living(int id) {
-        return Optional.ofNullable(entities.get(id)).map(Tracked::entity).filter(entity -> !entity.isDead());
+        return tracked(id).map(Tracked::entity).filter(entity -> !entity.isDead());
     }
 
     Optional<VirtualEntity> newest() {
@@ -48,25 +52,33 @@ final class WorldEntities {
         return Optional.ofNullable(newest);
     }
 
-    Optional<VirtualEntity> newestLiving() {
-        VirtualEntity newest = null;
-        for (Tracked tracked : entities.values()) {
-            if (!tracked.entity().isDead()) {
-                newest = tracked.entity();
-            }
-        }
-        return Optional.ofNullable(newest);
+    List<VirtualEntity> shownLivingIn(ChunkKey chunk) {
+        return entities.values().stream()
+                .filter(Tracked::shown)
+                .map(Tracked::entity)
+                .filter(entity -> !entity.isDead())
+                .filter(entity -> VirtualEntityService.chunkOf(entity).filter(chunk::equals).isPresent())
+                .toList();
     }
 
-    List<VirtualEntity> livingIn(ChunkKey chunk) {
-        return entities.values().stream().map(Tracked::entity)
-                .filter(entity -> !entity.isDead())
-                .filter(entity -> ChunkKey.containing(entity.position().x(), entity.position().z()).filter(chunk::equals).isPresent())
-                .toList();
+    List<Tracked> unshown() {
+        return entities.values().stream().filter(tracked -> !tracked.shown()).toList();
+    }
+
+    void add(VirtualEntity entity) {
+        entities.put(entity.id(), new Tracked(entity));
     }
 
     void replace(VirtualEntity entity) {
         entities.get(entity.id()).entity = entity;
+    }
+
+    Optional<Tracked> remove(int id) {
+        Tracked removed = entities.remove(id);
+        if (removed != null) {
+            lastHits.keySet().removeIf(hit -> hit.entity() == id);
+        }
+        return Optional.ofNullable(removed);
     }
 
     boolean coolingDown(UUID player, int id, long now, int cooldown) {
@@ -91,16 +103,16 @@ final class WorldEntities {
         uses++;
     }
 
-    List<Integer> removeDeadSince(long until) {
-        List<Integer> removed = new ArrayList<>();
+    List<Tracked> removeDeadSince(long until) {
+        List<Tracked> removed = new ArrayList<>();
         entities.values().removeIf(tracked -> {
             boolean gone = tracked.diedAt != NEVER && tracked.diedAt <= until;
             if (gone) {
-                removed.add(tracked.entity().id());
+                removed.add(tracked);
             }
             return gone;
         });
-        lastHits.keySet().removeIf(hit -> removed.contains(hit.entity()));
+        removed.forEach(tracked -> lastHits.keySet().removeIf(hit -> hit.entity() == tracked.entity().id()));
         return removed;
     }
 
@@ -115,17 +127,26 @@ final class WorldEntities {
     private record Hit(UUID player, int entity) {
     }
 
-    private static final class Tracked {
+    static final class Tracked {
 
         private VirtualEntity entity;
         private long diedAt = NEVER;
+        private boolean shown;
 
         private Tracked(VirtualEntity entity) {
             this.entity = entity;
         }
 
-        private VirtualEntity entity() {
+        VirtualEntity entity() {
             return entity;
+        }
+
+        boolean shown() {
+            return shown;
+        }
+
+        void markShown() {
+            shown = true;
         }
     }
 }

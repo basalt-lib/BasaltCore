@@ -8,24 +8,24 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import org.bukkit.Location;
 import org.bukkit.Server;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import tlm.dev.basalt.core.entity.EntityRefusal;
-import tlm.dev.basalt.core.entity.EntityResult;
-import tlm.dev.basalt.core.entity.EntitySettings;
+import tlm.dev.basalt.api.Basalt;
+import tlm.dev.basalt.api.VirtualEntity;
+import tlm.dev.basalt.api.VirtualWorld;
 import tlm.dev.basalt.core.entity.EntityStatus;
-import tlm.dev.basalt.core.entity.VirtualEntity;
 import tlm.dev.basalt.core.entity.VirtualEntityService;
 import tlm.dev.basalt.core.position.BlockPosition;
-import tlm.dev.basalt.core.position.Point;
 import tlm.dev.basalt.plugin.config.MessageKey;
 import tlm.dev.basalt.plugin.config.MessageSettings;
 
+import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
-import java.util.function.BiFunction;
 
 public final class DebugEntityCommand {
 
@@ -34,15 +34,17 @@ public final class DebugEntityCommand {
     private static final String Y = "y";
     private static final String Z = "z";
     private static final String NONE = "none";
+    private static final String NAME = "Basalt";
+    private static final double HEALTH = 5;
 
+    private final Basalt basalt;
     private final VirtualEntityService entities;
-    private final EntitySettings settings;
     private final Server server;
     private final MessageSettings messages;
 
-    public DebugEntityCommand(VirtualEntityService entities, EntitySettings settings, Server server, MessageSettings messages) {
+    public DebugEntityCommand(Basalt basalt, VirtualEntityService entities, Server server, MessageSettings messages) {
+        this.basalt = basalt;
         this.entities = entities;
-        this.settings = settings;
         this.server = server;
         this.messages = messages;
     }
@@ -50,34 +52,63 @@ public final class DebugEntityCommand {
     public LiteralArgumentBuilder<CommandSourceStack> branch() {
         return Commands.literal("entity")
                 .then(Commands.argument(PLAYER, StringArgumentType.word())
-                        .then(Commands.literal("on").then(position(entities::spawn, MessageKey.DEBUG_ENTITY_SPAWNED)))
-                        .then(Commands.literal("move").then(position(entities::move, MessageKey.DEBUG_ENTITY_MOVED)))
+                        .then(Commands.literal("on").then(position(this::spawn)))
+                        .then(Commands.literal("move").then(position(this::move)))
                         .then(Commands.literal("off").executes(this::removeAll))
                         .then(Commands.literal("status").executes(this::status)));
     }
 
-    private RequiredArgumentBuilder<CommandSourceStack, Double> position(
-            BiFunction<UUID, Point, EntityResult> action, MessageKey done) {
+    private RequiredArgumentBuilder<CommandSourceStack, Double> position(Placement placement) {
         return Commands.argument(X, horizontal())
                 .then(Commands.argument(Y, vertical())
-                        .then(Commands.argument(Z, horizontal()).executes(context -> place(context, action, done))));
+                        .then(Commands.argument(Z, horizontal()).executes(context -> place(context, placement))));
     }
 
-    private int place(CommandContext<CommandSourceStack> context, BiFunction<UUID, Point, EntityResult> action, MessageKey done) {
+    private int place(CommandContext<CommandSourceStack> context, Placement placement) {
         Player player = onlinePlayer(context);
         if (player == null) {
             return 0;
         }
-        Point at = new Point(DoubleArgumentType.getDouble(context, X), DoubleArgumentType.getDouble(context, Y), DoubleArgumentType.getDouble(context, Z));
-        EntityResult result = action.apply(player.getUniqueId(), at);
-        MessageKey message = result.refusal().map(DebugEntityCommand::refusalMessage).orElse(done);
-        int id = result.entity().map(VirtualEntity::id).orElse(0);
-        context.getSource().getSender().sendMessage(messages.render(message,
+        double x = DoubleArgumentType.getDouble(context, X);
+        double y = DoubleArgumentType.getDouble(context, Y);
+        double z = DoubleArgumentType.getDouble(context, Z);
+        VirtualWorld world = basalt.worldOf(player);
+        Placed placed = placement.place(player, world, world == null ? null : new Location(world.area().world(), x, y, z));
+        context.getSource().getSender().sendMessage(messages.render(placed.message(),
                 Placeholder.unparsed(PLAYER, player.getName()),
-                Placeholder.unparsed("id", Integer.toString(id)),
-                Placeholder.unparsed("max", Integer.toString(settings.maxPerPlayer())),
-                number(X, at.x()), number(Y, at.y()), number(Z, at.z())));
-        return result.entity().isPresent() ? Command.SINGLE_SUCCESS : 0;
+                Placeholder.unparsed("id", Integer.toString(placed.id())),
+                number(X, x), number(Y, y), number(Z, z)));
+        return placed.id() > 0 ? Command.SINGLE_SUCCESS : 0;
+    }
+
+    private Placed spawn(Player player, VirtualWorld world, Location at) {
+        if (world == null) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_NOT_VIRTUAL);
+        }
+        try {
+            VirtualEntity entity = world.spawnEntity(EntityType.ZOMBIE, at);
+            entity.setCustomName(Component.text(NAME));
+            entity.setMaxHealth(HEALTH);
+            return new Placed(MessageKey.DEBUG_ENTITY_SPAWNED, entity.id());
+        } catch (IllegalArgumentException outside) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_OUTSIDE);
+        } catch (IllegalStateException full) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_TOO_MANY);
+        }
+    }
+
+    private Placed move(Player player, VirtualWorld world, Location to) {
+        List<VirtualEntity> living = world == null ? List.of() : world.entities().stream().filter(entity -> entity.health() > 0).toList();
+        if (living.isEmpty()) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_NONE);
+        }
+        VirtualEntity newest = living.getLast();
+        try {
+            newest.teleport(to);
+            return new Placed(MessageKey.DEBUG_ENTITY_MOVED, newest.id());
+        } catch (IllegalArgumentException outside) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_OUTSIDE);
+        }
     }
 
     private int removeAll(CommandContext<CommandSourceStack> context) {
@@ -85,9 +116,11 @@ public final class DebugEntityCommand {
         if (player == null) {
             return 0;
         }
-        int removed = entities.removeAll(player.getUniqueId());
+        VirtualWorld world = basalt.worldOf(player);
+        List<VirtualEntity> removed = world == null ? List.of() : world.entities();
+        removed.forEach(VirtualEntity::remove);
         context.getSource().getSender().sendMessage(messages.render(MessageKey.DEBUG_ENTITY_REMOVED,
-                Placeholder.unparsed(PLAYER, player.getName()), Placeholder.unparsed("count", Integer.toString(removed))));
+                Placeholder.unparsed(PLAYER, player.getName()), Placeholder.unparsed("count", Integer.toString(removed.size()))));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -101,7 +134,7 @@ public final class DebugEntityCommand {
                 Placeholder.unparsed(PLAYER, player.getName()),
                 Placeholder.unparsed("entities", Integer.toString(status.entities())),
                 Placeholder.unparsed("last", status.last().map(entity -> Integer.toString(entity.id())).orElse(NONE)),
-                Placeholder.unparsed("health", status.last().map(entity -> Integer.toString(entity.health())).orElse(NONE)),
+                Placeholder.unparsed("health", status.last().map(entity -> health(entity.health())).orElse(NONE)),
                 Placeholder.unparsed("hits", Integer.toString(status.hits())),
                 Placeholder.unparsed("uses", Integer.toString(status.uses()))));
         return Command.SINGLE_SUCCESS;
@@ -116,13 +149,8 @@ public final class DebugEntityCommand {
         return player;
     }
 
-    private static MessageKey refusalMessage(EntityRefusal refusal) {
-        return switch (refusal) {
-            case NOT_VIRTUAL -> MessageKey.DEBUG_ENTITY_NOT_VIRTUAL;
-            case OUTSIDE_VIRTUAL_CHUNK -> MessageKey.DEBUG_ENTITY_OUTSIDE;
-            case TOO_MANY -> MessageKey.DEBUG_ENTITY_TOO_MANY;
-            case NONE_TO_MOVE -> MessageKey.DEBUG_ENTITY_NONE;
-        };
+    static String health(double health) {
+        return health == Math.rint(health) ? Long.toString((long) health) : Double.toString(health);
     }
 
     private static TagResolver number(String name, double value) {
@@ -135,5 +163,18 @@ public final class DebugEntityCommand {
 
     private static DoubleArgumentType vertical() {
         return DoubleArgumentType.doubleArg(-BlockPosition.MAX_VERTICAL, BlockPosition.MAX_VERTICAL);
+    }
+
+    @FunctionalInterface
+    private interface Placement {
+
+        Placed place(Player player, VirtualWorld world, Location at);
+    }
+
+    private record Placed(MessageKey message, int id) {
+
+        private static Placed refused(MessageKey message) {
+            return new Placed(message, 0);
+        }
     }
 }

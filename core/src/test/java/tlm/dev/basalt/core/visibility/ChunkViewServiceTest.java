@@ -109,6 +109,22 @@ class ChunkViewServiceTest {
     }
 
     @Test
+    void awaitsAChunkOfTheAreaUntilItIsSent() {
+        display.clientChunks.addAll(List.of(new ChunkKey(0, 0), new ChunkKey(1, 0)));
+        display.encoding.add(new ChunkKey(0, 0));
+        service.show(PLAYER, WORLD, TWO_BY_TWO);
+
+        assertTrue(service.awaits(PLAYER, new ChunkKey(0, 0)));
+        service.sendRequested(16);
+        assertTrue(service.awaits(PLAYER, new ChunkKey(0, 0)));
+        assertFalse(service.awaits(PLAYER, new ChunkKey(1, 0)));
+        assertFalse(service.awaits(OTHER, new ChunkKey(0, 0)));
+        display.encoding.clear();
+        service.sendRequested(16);
+        assertFalse(service.awaits(PLAYER, new ChunkKey(0, 0)));
+    }
+
+    @Test
     void retriesAChunkWhoseVirtualPacketIsNotReady() {
         display.clientChunks.addAll(List.of(new ChunkKey(0, 0), new ChunkKey(1, 0)));
         display.encoding.add(new ChunkKey(0, 0));

@@ -1,6 +1,9 @@
 package tlm.dev.basalt.plugin.entity;
 
+import org.bukkit.Server;
+import org.bukkit.entity.Player;
 import tlm.dev.basalt.core.entity.EntityViews;
+import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.position.ChunkRange;
 import tlm.dev.basalt.core.visibility.ChunkViews;
 import tlm.dev.basalt.core.world.VirtualWorlds;
@@ -13,10 +16,12 @@ import java.util.function.Supplier;
 
 public final class ChunkEntityViews implements EntityViews {
 
+    private final Server server;
     private final Supplier<ChunkViews> views;
     private final Supplier<VirtualWorlds<?>> worlds;
 
-    public ChunkEntityViews(Supplier<ChunkViews> views, Supplier<VirtualWorlds<?>> worlds) {
+    public ChunkEntityViews(Server server, Supplier<ChunkViews> views, Supplier<VirtualWorlds<?>> worlds) {
+        this.server = server;
         this.views = views;
         this.worlds = worlds;
     }
@@ -34,6 +39,12 @@ public final class ChunkEntityViews implements EntityViews {
     @Override
     public Set<UUID> viewers(UUID world) {
         return worlds.get().snapshot(world).<Set<UUID>>map(WorldSnapshot::viewers).orElse(Set.of());
+    }
+
+    @Override
+    public boolean holdsChunk(UUID viewer, ChunkKey chunk) {
+        Player online = server.getPlayer(viewer);
+        return online != null && online.isChunkSent(chunk.packed()) && !views.get().awaits(viewer, chunk);
     }
 
     @Override

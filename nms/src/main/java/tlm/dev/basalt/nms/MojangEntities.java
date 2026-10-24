@@ -18,8 +18,8 @@ public final class MojangEntities {
         return new MojangEntityDisplay(server, new NettyPlayerChannels());
     }
 
-    public static EntityShapes shapes() {
-        return new MojangEntityShapes();
+    public static EntityShapes shapes(Server server) {
+        return new MojangEntityShapes(server);
     }
 
     public static VirtualEntityIds ids() {

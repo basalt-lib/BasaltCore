@@ -6,6 +6,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import tlm.dev.basalt.api.BasaltProvider;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.entity.EntitySettings;
+import tlm.dev.basalt.core.entity.EntityShapes;
 import tlm.dev.basalt.core.entity.EntityTools;
 import tlm.dev.basalt.core.entity.VirtualEntityService;
 import tlm.dev.basalt.core.interaction.InteractionReplies;
@@ -46,6 +47,7 @@ import tlm.dev.basalt.plugin.entity.ChunkEntityViews;
 import tlm.dev.basalt.plugin.entity.EntityExits;
 import tlm.dev.basalt.plugin.entity.EntityTicker;
 import tlm.dev.basalt.plugin.facade.BasaltFacade;
+import tlm.dev.basalt.plugin.facade.ConversionTools;
 import tlm.dev.basalt.plugin.facade.FacadeTools;
 import tlm.dev.basalt.plugin.facade.ServiceRegistration;
 import tlm.dev.basalt.plugin.interaction.InteractionQueues;
@@ -96,8 +98,10 @@ public final class BasaltPlugin extends JavaPlugin {
         AtomicReference<VirtualWorlds<?>> worldsOnceCreated = new AtomicReference<>();
         InteractionReplies replies = MojangInteractions.replies(getServer());
         ChunkEncoders encoders = new ChunkEncoders(WorldSettingsParser.encoderThreads(reader), getLogger());
+        EntityShapes shapes = MojangEntities.shapes(getServer());
         VirtualEntityService entities = new VirtualEntityService(new EntityTools(MojangEntities.ids(), MojangEntities.display(getServer()),
-                new ChunkEntityViews(viewsOnceCreated::get, worldsOnceCreated::get)), entitySettings);
+                new ChunkEntityViews(getServer(), viewsOnceCreated::get, worldsOnceCreated::get), (world, entity, killer) -> {
+                }), entitySettings);
         EntityExits entityExits = new EntityExits(entities);
         WorldExits worldExits = new WorldExits(worldsOnceCreated::get, viewsOnceCreated::get);
         PlayerSeparations separations = new PlayerSeparations(this, worldsOnceCreated::get);
@@ -109,18 +113,18 @@ public final class BasaltPlugin extends JavaPlugin {
                 ViewChanges.both(masks, ViewChanges.both(entityExits, ViewChanges.both(worldExits, separations))), new WorldSource(worlds, chunks, encoders));
         viewsOnceCreated.set(views);
         InteractionService interactions = new InteractionService(new InteractionTools(MojangInteractions.world(getServer()),
-                new ViewBlocks(worlds), new ViewEntities(entities, MojangEntities.shapes()), replies), settings);
-        BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion(), new FacadeTools(getServer(), worlds, new MojangBlockStates(), worldSettings));
+                new ViewBlocks(worlds), new ViewEntities(entities, shapes), replies), settings);
+        BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion(), new FacadeTools(getServer(), worlds, entities, new ConversionTools(new MojangBlockStates(), shapes)));
         FlyingKickListener flyingKicks = new FlyingKickListener(views, getLogger());
         lifecycle = new LifecycleManager(List.of(
                 new ServiceRegistration(getServer().getServicesManager(), this, basalt),
                 encoders,
-                new EntityTicker(this, entities),
                 new WorldSessions(worlds, getLogger()),
                 separations,
                 new ViewSessions(views, getServer(), getLogger()),
                 flyingKicks,
                 new ViewSender(this, views, WorldSettingsParser.chunkSendsPerTick(reader)),
+                new EntityTicker(this, entities),
                 new InteractionTicker(this, queues, interactions),
                 new EntityScanner(this, masks, maskSettings.scanIntervalTicks())), getLogger());
         lifecycle.enable();
@@ -133,7 +137,7 @@ public final class BasaltPlugin extends JavaPlugin {
         plugins.registerEvents(new SeparationJoinListener(separations), this);
         plugins.registerEvents(new SeparationQuitListener(separations), this);
         DebugCommands commands = new DebugCommands(new DebugChunkCommand(basalt, area -> basalt.createWorldOverRealBlocks(this, area), getServer(), messages),
-                new DebugEntityCommand(entities, entitySettings, getServer(), messages), new DebugWorldCommand(basalt, this, messages));
+                new DebugEntityCommand(basalt, entities, getServer(), messages), new DebugWorldCommand(basalt, this, messages));
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> event.registrar().register(commands.node()));
 
         GameVersion game = new MojangGameVersionSource().current();

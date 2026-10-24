@@ -1,8 +1,10 @@
 package tlm.dev.basalt.core.entity;
 
+import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -14,6 +16,11 @@ final class FakeEntityViews implements EntityViews {
     final Map<UUID, UUID> viewing = new HashMap<>();
     final Map<UUID, ChunkRange> areas = new HashMap<>();
     final Map<UUID, Set<Integer>> published = new HashMap<>();
+    final Map<UUID, Set<ChunkKey>> missing = new HashMap<>();
+
+    void lacks(UUID viewer, ChunkKey chunk) {
+        missing.computeIfAbsent(viewer, id -> new HashSet<>()).add(chunk);
+    }
 
     @Override
     public Optional<UUID> worldOf(UUID player) {
@@ -34,6 +41,11 @@ final class FakeEntityViews implements EntityViews {
             }
         });
         return viewers;
+    }
+
+    @Override
+    public boolean holdsChunk(UUID viewer, ChunkKey chunk) {
+        return !missing.getOrDefault(viewer, Set.of()).contains(chunk);
     }
 
     @Override

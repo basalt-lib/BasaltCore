@@ -1,18 +1,25 @@
 package tlm.dev.basalt.plugin.facade;
 
+import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
 import tlm.dev.basalt.api.ChunkArea;
 import tlm.dev.basalt.api.PlayerVisibility;
+import tlm.dev.basalt.api.VirtualEntity;
 import tlm.dev.basalt.api.VirtualWorld;
+import tlm.dev.basalt.core.entity.EntityResult;
+import tlm.dev.basalt.core.entity.Rotation;
 import tlm.dev.basalt.core.position.BlockBox;
 import tlm.dev.basalt.core.position.BlockPosition;
+import tlm.dev.basalt.core.position.Point;
 import tlm.dev.basalt.core.world.EditResult;
 import tlm.dev.basalt.core.world.WorldSnapshot;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -64,14 +71,14 @@ final class WorldFacade implements VirtualWorld {
         if (state.isEmpty()) {
             throw outside(x + " " + y + " " + z);
         }
-        return tools.blocks().dataOf(state.getAsInt());
+        return tools.conversions().blocks().dataOf(state.getAsInt());
     }
 
     @Override
     public void setBlock(int x, int y, int z, BlockData data) {
         open();
         Objects.requireNonNull(data, "data");
-        edited(tools.worlds().setBlock(id, position(x, y, z), tools.blocks().stateOf(data)), x + " " + y + " " + z);
+        edited(tools.worlds().setBlock(id, position(x, y, z), tools.conversions().blocks().stateOf(data)), x + " " + y + " " + z);
     }
 
     @Override
@@ -80,7 +87,7 @@ final class WorldFacade implements VirtualWorld {
         Objects.requireNonNull(box, "box");
         Objects.requireNonNull(data, "data");
         BlockBox blocks = BlockBoxes.of(box);
-        edited(tools.worlds().fill(id, blocks, tools.blocks().stateOf(data)), blocks.min() + " to " + blocks.max());
+        edited(tools.worlds().fill(id, blocks, tools.conversions().blocks().stateOf(data)), blocks.min() + " to " + blocks.max());
     }
 
     @Override
@@ -135,6 +142,32 @@ final class WorldFacade implements VirtualWorld {
     }
 
     @Override
+    public VirtualEntity spawnEntity(EntityType type, Location location) {
+        open();
+        Objects.requireNonNull(type, "type");
+        if (type == EntityType.UNKNOWN || !tools.conversions().entities().creatable(type.getKey().toString())) {
+            throw new IllegalArgumentException(type + " cannot be summoned");
+        }
+        Point at = pointOf(location);
+        EntityResult result = tools.entities().spawn(id, type.getKey().toString(), at, new Rotation(location.getYaw(), location.getPitch()));
+        result.refusal().ifPresent(refusal -> {
+            throw switch (refusal) {
+                case TOO_MANY -> new IllegalStateException("a virtual world holds at most "
+                        + tools.entities().settings().maxPerWorld() + " entities (entity.max-per-world)");
+                case OUTSIDE_AREA -> outside(at.x() + " " + at.y() + " " + at.z());
+                case NO_WORLD, GONE, DYING -> closed();
+            };
+        });
+        return new EntityFacade(this, result.entity().orElseThrow(), tools);
+    }
+
+    @Override
+    public List<VirtualEntity> entities() {
+        tools.checkThread();
+        return tools.entities().entities(id).stream().<VirtualEntity>map(entity -> new EntityFacade(this, entity, tools)).toList();
+    }
+
+    @Override
     public PlayerVisibility playerVisibility() {
         open();
         boolean everyone = tools.worlds().snapshot(id).map(snapshot -> snapshot.label().openToEveryone()).orElse(false);
@@ -152,6 +185,18 @@ final class WorldFacade implements VirtualWorld {
     public void close() {
         tools.checkThread();
         tools.worlds().close(id);
+    }
+
+    Point pointOf(Location location) {
+        Objects.requireNonNull(location, "location");
+        if (location.getWorld() == null || !location.getWorld().getUID().equals(area.world().getUID())) {
+            throw new IllegalArgumentException("the location is not in " + area.world().getName());
+        }
+        Point at = new Point(location.getX(), location.getY(), location.getZ());
+        if (!at.isFinite() || at.y() < area.world().getMinHeight() || at.y() >= area.world().getMaxHeight()) {
+            throw outside(at.x() + " " + at.y() + " " + at.z());
+        }
+        return at;
     }
 
     private void open() {

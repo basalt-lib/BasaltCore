@@ -1,6 +1,8 @@
 package tlm.dev.basalt.nms.entity;
 
 import io.netty.buffer.Unpooled;
+import io.papermc.paper.adventure.PaperAdventure;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.FriendlyByteBuf;
@@ -13,7 +15,6 @@ import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -26,6 +27,8 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.phys.Vec3;
 import org.bukkit.Server;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
@@ -79,6 +82,16 @@ public final class MojangEntityDisplay implements EntityDisplay {
     }
 
     @Override
+    public void update(UUID player, VirtualEntity entity) {
+        Player online = server.getPlayer(player);
+        if (online == null) {
+            return;
+        }
+        template(((CraftPlayer) online).getHandle(), entity).ifPresent(template ->
+                channels.writeDirect(online, new ClientboundSetEntityDataPacket(entity.id(), template.getEntityData().packAll())));
+    }
+
+    @Override
     public void hurt(UUID player, VirtualEntity entity, UUID attacker) {
         Player online = server.getPlayer(player);
         if (online != null) {
@@ -88,10 +101,10 @@ public final class MojangEntityDisplay implements EntityDisplay {
     }
 
     @Override
-    public void die(UUID player, VirtualEntity entity, UUID attacker) {
+    public void die(UUID player, VirtualEntity entity, Optional<UUID> killer) {
         Player online = server.getPlayer(player);
         if (online != null) {
-            channels.writeDirect(online, damage(attackerOf(online, attacker), entity));
+            killer.ifPresent(attacker -> channels.writeDirect(online, damage(attackerOf(online, attacker), entity)));
             channels.writeDirect(online, event(entity.id(), EntityEvent.DEATH));
             sound(entity, "death").ifPresent(sound -> channels.writeDirect(online, sound));
         }
@@ -127,12 +140,18 @@ public final class MojangEntityDisplay implements EntityDisplay {
         Optional<Entity> created = EntityType.byString(entity.type())
                 .map(type -> type.create(viewer.level(), EntitySpawnReason.COMMAND));
         created.ifPresent(template -> {
-            template.setCustomName(entity.name().isEmpty() ? null : Component.literal(entity.name()));
-            template.setCustomNameVisible(!entity.name().isEmpty());
+            template.setCustomName(entity.looks().name()
+                    .map(json -> PaperAdventure.asVanilla(GsonComponentSerializer.gson().deserialize(json)))
+                    .orElse(null));
+            template.setCustomNameVisible(entity.looks().name().isPresent());
             template.setNoGravity(true);
             template.setSilent(true);
             if (template instanceof LivingEntity living) {
-                living.setHealth(entity.health());
+                AttributeInstance maxHealth = living.getAttribute(Attributes.MAX_HEALTH);
+                if (maxHealth != null) {
+                    maxHealth.setBaseValue(entity.life().maxHealth());
+                }
+                living.setHealth((float) entity.health());
             }
         });
         return created;
@@ -151,6 +170,9 @@ public final class MojangEntityDisplay implements EntityDisplay {
     }
 
     private Optional<ClientboundSoundPacket> sound(VirtualEntity entity, String kind) {
+        if (entity.looks().silent()) {
+            return Optional.empty();
+        }
         Optional<EntityType<?>> type = EntityType.byString(entity.type());
         Identifier typeKey = Identifier.tryParse(entity.type());
         if (type.isEmpty() || typeKey == null) {

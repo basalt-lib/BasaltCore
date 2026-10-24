@@ -1,6 +1,8 @@
 package tlm.dev.basalt.api;
 
+import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
@@ -8,6 +10,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -121,6 +124,27 @@ public interface VirtualWorld {
      * @return a copy of the viewers, empty once the world is closed
      */
     @NotNull @Unmodifiable Set<Player> viewers();
+
+    /**
+     * Creates an entity in this world. It appears to every viewer at the next tick, with the state it has then,
+     * so it can be set up first without extra packets. It starts with 20 health out of 20, no name, and is not silent.
+     *
+     * @param type a type the server can summon, never {@link EntityType#PLAYER}
+     * @param location where it stands, with its yaw and pitch, in the area of this world
+     * @return the new entity
+     * @throws IllegalArgumentException if the type cannot be summoned, or the location is in another real world or
+     *                                  outside the area
+     * @throws IllegalStateException if the world is closed or already holds the most entities allowed
+     *                               ({@code entity.max-per-world} of the BasaltCore config)
+     */
+    @NotNull VirtualEntity spawnEntity(@NotNull EntityType type, @NotNull Location location);
+
+    /**
+     * Returns the entities of this world, dying ones included until they are removed.
+     *
+     * @return a copy of the entities, in the order they were created, empty once the world is closed
+     */
+    @NotNull @Unmodifiable List<VirtualEntity> entities();
 
     /**
      * Returns which players the viewers of this world see.

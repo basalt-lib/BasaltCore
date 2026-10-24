@@ -3,7 +3,7 @@ interaction:
   reach-margin: 1.0
   entity-reach-margin: 3.0
 entity:
-  max-per-player: 16
+  max-per-world: 16
 visibility:
   entity-scan-interval-ticks: 5
   max-entities-per-scan: 256

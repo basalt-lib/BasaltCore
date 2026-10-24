@@ -46,7 +46,7 @@ class EntityMaskSettingsParserTest {
     @Test
     void everyShippedKeyIsReadByAParser() throws IOException {
         assertEquals(List.of(InteractionSettingsParser.MAX_ACTIONS_PER_SECOND, InteractionSettingsParser.REACH_MARGIN,
-                InteractionSettingsParser.ENTITY_REACH_MARGIN, EntitySettingsParser.MAX_PER_PLAYER,
+                InteractionSettingsParser.ENTITY_REACH_MARGIN, EntitySettingsParser.MAX_PER_WORLD,
                 EntityMaskSettingsParser.SCAN_INTERVAL_TICKS, EntityMaskSettingsParser.MAX_ENTITIES_PER_SCAN,
                 WorldSettingsParser.MAX_CHUNKS, WorldSettingsParser.MAX_WORLDS, WorldSettingsParser.MAX_CHUNK_SENDS_PER_TICK,
                 WorldSettingsParser.ENCODER_THREADS),

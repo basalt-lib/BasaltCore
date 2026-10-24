@@ -4,12 +4,12 @@ import tlm.dev.basalt.core.entity.EntitySettings;
 
 public final class EntitySettingsParser {
 
-    public static final String MAX_PER_PLAYER = "entity.max-per-player";
+    public static final String MAX_PER_WORLD = "entity.max-per-world";
 
     private EntitySettingsParser() {
     }
 
     public static EntitySettings parse(ConfigReader config) {
-        return new EntitySettings(config.wholeNumber(MAX_PER_PLAYER, 1, EntitySettings.MAX_PER_PLAYER_LIMIT));
+        return new EntitySettings(config.wholeNumber(MAX_PER_WORLD, 1, EntitySettings.MAX_PER_WORLD_LIMIT));
     }
 }

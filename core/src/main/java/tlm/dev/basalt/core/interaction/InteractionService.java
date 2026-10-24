@@ -56,7 +56,7 @@ public final class InteractionService {
         if (request.action() != EntityAction.ATTACK) {
             return tools.entities().use(player, request.entity()) ? InteractionOutcome.done() : InteractionOutcome.ignored(Refusal.NO_ENTITY);
         }
-        return switch (tools.entities().attack(player, request.entity())) {
+        return switch (tools.entities().attack(player, request.entity(), context.held().damage())) {
             case HURT, KILLED -> InteractionOutcome.done();
             case TOO_SOON -> InteractionOutcome.ignored(Refusal.HIT_TOO_SOON);
             case GONE -> InteractionOutcome.ignored(Refusal.NO_ENTITY);
@@ -165,7 +165,7 @@ public final class InteractionService {
         BlockPosition neighbour = clicked.relative(request.face());
         Placement placement = checkPlacement(player, clicked, neighbour, context);
         if (placement.refusal() == null) {
-            tools.blocks().set(player, placement.target(), context.heldBlock().getAsInt());
+            tools.blocks().set(player, placement.target(), context.held().block().getAsInt());
         }
         List<BlockChange> updates = new ArrayList<>();
         virtualState(player, clicked).ifPresent(updates::add);
@@ -173,7 +173,7 @@ public final class InteractionService {
         if (placement.refusal() != null) {
             return InteractionOutcome.refused(placement.refusal(), updates, true, request.sequence());
         }
-        BlockChange placed = new BlockChange(placement.target(), context.heldBlock().getAsInt());
+        BlockChange placed = new BlockChange(placement.target(), context.held().block().getAsInt());
         return InteractionOutcome.accepted(List.of(placed), updates, true, request.sequence());
     }
 
@@ -182,7 +182,7 @@ public final class InteractionService {
         if (clickedState.isEmpty()) {
             return Placement.refused(Refusal.NOT_VIRTUAL);
         }
-        if (context.heldBlock().isEmpty()) {
+        if (context.held().block().isEmpty()) {
             return Placement.refused(Refusal.NO_EFFECT);
         }
         if (!context.mode().changesBlocks()) {
@@ -196,7 +196,7 @@ public final class InteractionService {
         if (!tools.world().replaceable(targetState.getAsInt())) {
             return Placement.refused(Refusal.NOT_REPLACEABLE);
         }
-        if (!tools.world().unobstructed(player, target, context.heldBlock().getAsInt())) {
+        if (!tools.world().unobstructed(player, target, context.held().block().getAsInt())) {
             return Placement.refused(Refusal.OBSTRUCTED);
         }
         return new Placement(target, null);

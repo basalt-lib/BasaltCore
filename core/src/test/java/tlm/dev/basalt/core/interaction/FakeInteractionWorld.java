@@ -25,7 +25,7 @@ final class FakeInteractionWorld implements InteractionWorld {
 
     void stand(UUID player, GameMode mode, long tick, OptionalInt heldBlock) {
         PlayerStance stance = new PlayerStance(new Point(1029.5, -58.38, 1027.5), new Point(1029.5, -60.0, 1027.5), true, new Reach(4.5, 3.0));
-        contexts.put(player, new InteractionContext(tick, mode, stance, heldBlock));
+        contexts.put(player, new InteractionContext(tick, mode, stance, new HeldItem(heldBlock, HeldItem.MIN_DAMAGE)));
     }
 
     void eyes(UUID player, Point eyes) {
@@ -39,13 +39,18 @@ final class FakeInteractionWorld implements InteractionWorld {
         put(player, current, new PlayerStance(current.stance().eyes(), feet, false, current.stance().reach()));
     }
 
+    void holding(UUID player, double attackDamage) {
+        InteractionContext current = contexts.get(player);
+        contexts.put(player, new InteractionContext(current.tick(), current.mode(), current.stance(), new HeldItem(current.held().block(), attackDamage)));
+    }
+
     void at(UUID player, long tick) {
         InteractionContext current = contexts.get(player);
-        contexts.put(player, new InteractionContext(tick, current.mode(), current.stance(), current.heldBlock()));
+        contexts.put(player, new InteractionContext(tick, current.mode(), current.stance(), current.held()));
     }
 
     private void put(UUID player, InteractionContext current, PlayerStance stance) {
-        contexts.put(player, new InteractionContext(current.tick(), current.mode(), stance, current.heldBlock()));
+        contexts.put(player, new InteractionContext(current.tick(), current.mode(), stance, current.held()));
     }
 
     @Override

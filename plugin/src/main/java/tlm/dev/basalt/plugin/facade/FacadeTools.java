@@ -1,15 +1,14 @@
 package tlm.dev.basalt.plugin.facade;
 
 import org.bukkit.Server;
+import tlm.dev.basalt.core.entity.VirtualEntityService;
 import tlm.dev.basalt.core.world.VirtualWorlds;
-import tlm.dev.basalt.core.world.WorldSettings;
-import tlm.dev.basalt.nms.platform.MojangBlockStates;
 
-public record FacadeTools(Server server, VirtualWorlds<?> worlds, MojangBlockStates blocks, WorldSettings settings) {
+public record FacadeTools(Server server, VirtualWorlds<?> worlds, VirtualEntityService entities, ConversionTools conversions) {
 
     public FacadeTools {
-        if (server == null || worlds == null || blocks == null || settings == null) {
-            throw new IllegalArgumentException("the facade needs the server, the worlds, the block states and the world settings");
+        if (server == null || worlds == null || entities == null || conversions == null) {
+            throw new IllegalArgumentException("the facade needs the server, the worlds, the entities and the conversions");
         }
     }
 

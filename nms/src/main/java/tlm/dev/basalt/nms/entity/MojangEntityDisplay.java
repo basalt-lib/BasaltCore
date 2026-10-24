@@ -79,19 +79,19 @@ public final class MojangEntityDisplay implements EntityDisplay {
     }
 
     @Override
-    public void hurt(UUID player, VirtualEntity entity) {
+    public void hurt(UUID player, VirtualEntity entity, UUID attacker) {
         Player online = server.getPlayer(player);
         if (online != null) {
-            channels.writeDirect(online, damage(((CraftPlayer) online).getHandle(), entity));
+            channels.writeDirect(online, damage(attackerOf(online, attacker), entity));
             sound(entity, "hurt").ifPresent(sound -> channels.writeDirect(online, sound));
         }
     }
 
     @Override
-    public void die(UUID player, VirtualEntity entity) {
+    public void die(UUID player, VirtualEntity entity, UUID attacker) {
         Player online = server.getPlayer(player);
         if (online != null) {
-            channels.writeDirect(online, damage(((CraftPlayer) online).getHandle(), entity));
+            channels.writeDirect(online, damage(attackerOf(online, attacker), entity));
             channels.writeDirect(online, event(entity.id(), EntityEvent.DEATH));
             sound(entity, "death").ifPresent(sound -> channels.writeDirect(online, sound));
         }
@@ -109,6 +109,11 @@ public final class MojangEntityDisplay implements EntityDisplay {
             ids.forEach(id -> channels.writeDirect(online, event(id, EntityEvent.POOF)));
             channels.writeDirect(online, new ClientboundRemoveEntitiesPacket(ids.stream().mapToInt(Integer::intValue).toArray()));
         }
+    }
+
+    private ServerPlayer attackerOf(Player viewer, UUID attacker) {
+        Player hitter = server.getPlayer(attacker);
+        return ((CraftPlayer) (hitter != null ? hitter : viewer)).getHandle();
     }
 
     private void send(UUID player, Packet<?> packet) {

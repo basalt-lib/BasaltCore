@@ -8,7 +8,11 @@ import java.util.UUID;
 
 public interface EntityViews {
 
-    Optional<ChunkRange> area(UUID player);
+    Optional<UUID> worldOf(UUID player);
 
-    void publish(UUID player, Set<Integer> ids);
+    Optional<ChunkRange> area(UUID world);
+
+    Set<UUID> viewers(UUID world);
+
+    void publish(UUID world, Set<Integer> ids);
 }

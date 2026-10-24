@@ -4,7 +4,25 @@ import java.util.UUID;
 
 public interface WorldListener {
 
-    void emptied(UUID world);
+    default void emptied(UUID world) {
+    }
 
-    void closed(UUID world);
+    default void closed(UUID world) {
+    }
+
+    static WorldListener both(WorldListener first, WorldListener second) {
+        return new WorldListener() {
+            @Override
+            public void emptied(UUID world) {
+                first.emptied(world);
+                second.emptied(world);
+            }
+
+            @Override
+            public void closed(UUID world) {
+                first.closed(world);
+                second.closed(world);
+            }
+        };
+    }
 }

@@ -15,7 +15,7 @@ public final class VirtualEntityService {
 
     private final EntityTools tools;
     private final EntitySettings settings;
-    private final Map<UUID, PlayerEntities> players = new HashMap<>();
+    private final Map<UUID, WorldEntities> worlds = new HashMap<>();
     private long tick;
 
     public VirtualEntityService(EntityTools tools, EntitySettings settings) {
@@ -24,130 +24,157 @@ public final class VirtualEntityService {
     }
 
     public EntityResult spawn(UUID player, Point at) {
-        Optional<EntityRefusal> refusal = placementRefusal(player, at);
-        if (refusal.isPresent()) {
-            return EntityResult.refused(refusal.get());
+        Optional<UUID> world = tools.views().worldOf(player);
+        if (world.isEmpty()) {
+            return EntityResult.refused(EntityRefusal.NOT_VIRTUAL);
         }
-        PlayerEntities entities = players.computeIfAbsent(player, id -> new PlayerEntities());
+        if (!inside(world.get(), at)) {
+            return EntityResult.refused(EntityRefusal.OUTSIDE_VIRTUAL_CHUNK);
+        }
+        WorldEntities entities = worlds.computeIfAbsent(world.get(), id -> new WorldEntities());
         if (entities.size() >= settings.maxPerPlayer()) {
             return EntityResult.refused(EntityRefusal.TOO_MANY);
         }
         VirtualEntity entity = DebugEntityPattern.at(tools.ids().next(), at);
         entities.add(entity);
-        tools.display().spawn(player, entity);
-        tools.views().publish(player, entities.ids());
+        viewersOf(world.get()).forEach(viewer -> tools.display().spawn(viewer, entity));
+        tools.views().publish(world.get(), entities.ids());
         return EntityResult.done(entity);
     }
 
     public EntityResult move(UUID player, Point to) {
-        Optional<VirtualEntity> newest = Optional.ofNullable(players.get(player)).flatMap(PlayerEntities::newestLiving);
+        Optional<UUID> world = tools.views().worldOf(player);
+        Optional<VirtualEntity> newest = world.map(worlds::get).flatMap(WorldEntities::newestLiving);
         if (newest.isEmpty()) {
             return EntityResult.refused(EntityRefusal.NONE_TO_MOVE);
         }
-        Optional<EntityRefusal> refusal = placementRefusal(player, to);
-        if (refusal.isPresent()) {
-            return EntityResult.refused(refusal.get());
+        if (!inside(world.get(), to)) {
+            return EntityResult.refused(EntityRefusal.OUTSIDE_VIRTUAL_CHUNK);
         }
         VirtualEntity moved = newest.get().movedTo(to);
-        players.get(player).replace(moved);
-        tools.display().move(player, moved);
+        worlds.get(world.get()).replace(moved);
+        viewersOf(world.get()).forEach(viewer -> tools.display().move(viewer, moved));
         return EntityResult.done(moved);
     }
 
     public int removeAll(UUID player) {
-        PlayerEntities entities = players.remove(player);
+        Optional<UUID> world = tools.views().worldOf(player);
+        WorldEntities entities = world.map(worlds::remove).orElse(null);
         if (entities == null) {
             return 0;
         }
         List<Integer> ids = entities.idsInOrder();
         if (!ids.isEmpty()) {
-            tools.display().remove(player, ids);
+            viewersOf(world.get()).forEach(viewer -> tools.display().remove(viewer, ids));
         }
-        tools.views().publish(player, Set.of());
+        tools.views().publish(world.get(), Set.of());
         return ids.size();
     }
 
-    public void forget(UUID player) {
-        players.remove(player);
+    public void viewerEntered(UUID world) {
+        WorldEntities entities = worlds.get(world);
+        if (entities != null) {
+            tools.views().publish(world, entities.ids());
+        }
     }
 
-    public void resend(UUID player) {
-        PlayerEntities entities = players.get(player);
+    public void viewerLeft(UUID player, UUID world, boolean clientKeepsChunks) {
+        WorldEntities entities = worlds.get(world);
+        if (entities == null) {
+            return;
+        }
+        entities.forgetHitsOf(player);
+        List<Integer> ids = entities.idsInOrder();
+        if (clientKeepsChunks && !ids.isEmpty()) {
+            tools.display().remove(player, ids);
+        }
+    }
+
+    public void forgetWorld(UUID world) {
+        worlds.remove(world);
+    }
+
+    public void resend(UUID player, UUID world, ChunkKey chunk) {
+        WorldEntities entities = worlds.get(world);
         if (entities != null) {
-            entities.allLiving().forEach(entity -> tools.display().spawn(player, entity));
+            entities.livingIn(chunk).forEach(entity -> tools.display().spawn(player, entity));
         }
     }
 
     public Optional<VirtualEntity> find(UUID player, int id) {
-        return Optional.ofNullable(players.get(player)).flatMap(entities -> entities.living(id));
+        return entitiesOf(player).flatMap(entities -> entities.living(id));
     }
 
     public HitOutcome attack(UUID player, int id) {
-        PlayerEntities entities = players.get(player);
+        Optional<UUID> world = tools.views().worldOf(player);
+        WorldEntities entities = world.map(worlds::get).orElse(null);
         Optional<VirtualEntity> target = entities == null ? Optional.empty() : entities.living(id);
         if (target.isEmpty()) {
             return HitOutcome.GONE;
         }
-        if (entities.coolingDown(id, tick, DebugEntityPattern.HIT_COOLDOWN_TICKS)) {
+        if (entities.coolingDown(player, id, tick, DebugEntityPattern.HIT_COOLDOWN_TICKS)) {
             return HitOutcome.TOO_SOON;
         }
         VirtualEntity hurt = target.get().hurt(DebugEntityPattern.DAMAGE_PER_HIT);
         entities.replace(hurt);
-        entities.hit(id, tick);
+        entities.hit(player, id, tick);
         if (hurt.isDead()) {
             entities.died(id, tick);
-            tools.display().die(player, hurt);
+            viewersOf(world.get()).forEach(viewer -> tools.display().die(viewer, hurt, player));
             return HitOutcome.KILLED;
         }
-        tools.display().hurt(player, hurt);
+        viewersOf(world.get()).forEach(viewer -> tools.display().hurt(viewer, hurt, player));
         return HitOutcome.HURT;
     }
 
     public boolean use(UUID player, int id) {
-        PlayerEntities entities = players.get(player);
-        if (entities == null || entities.living(id).isEmpty()) {
+        Optional<WorldEntities> entities = entitiesOf(player);
+        if (entities.isEmpty() || entities.get().living(id).isEmpty()) {
             return false;
         }
-        entities.used();
+        entities.get().used();
         return true;
     }
 
     public void tick() {
         tick++;
         long removable = tick - DebugEntityPattern.REMOVAL_AFTER_DEATH_TICKS;
-        for (Map.Entry<UUID, PlayerEntities> entry : players.entrySet()) {
+        for (Map.Entry<UUID, WorldEntities> entry : worlds.entrySet()) {
             List<Integer> removed = entry.getValue().removeDeadSince(removable);
             if (!removed.isEmpty()) {
-                tools.display().removeDead(entry.getKey(), removed);
+                viewersOf(entry.getKey()).forEach(viewer -> tools.display().removeDead(viewer, removed));
                 tools.views().publish(entry.getKey(), entry.getValue().ids());
             }
         }
     }
 
     public EntityStatus status(UUID player) {
-        PlayerEntities entities = players.get(player);
-        if (entities == null) {
+        Optional<WorldEntities> found = entitiesOf(player);
+        if (found.isEmpty()) {
             return new EntityStatus(0, Optional.empty(), 0, 0);
         }
+        WorldEntities entities = found.get();
         return new EntityStatus(entities.size(), entities.newest(), entities.hits(), entities.uses());
     }
 
     public int held() {
-        return players.values().stream().mapToInt(PlayerEntities::size).sum();
+        return worlds.values().stream().mapToInt(WorldEntities::size).sum();
     }
 
-    int playersTracked() {
-        return players.size();
+    int worldsTracked() {
+        return worlds.size();
     }
 
-    private Optional<EntityRefusal> placementRefusal(UUID player, Point at) {
-        Optional<ChunkRange> area = tools.views().area(player);
-        if (area.isEmpty()) {
-            return Optional.of(EntityRefusal.NOT_VIRTUAL);
-        }
-        if (ChunkKey.containing(at.x(), at.z()).filter(area.get()::contains).isEmpty()) {
-            return Optional.of(EntityRefusal.OUTSIDE_VIRTUAL_CHUNK);
-        }
-        return Optional.empty();
+    private Optional<WorldEntities> entitiesOf(UUID player) {
+        return tools.views().worldOf(player).map(worlds::get);
+    }
+
+    private Set<UUID> viewersOf(UUID world) {
+        return tools.views().viewers(world);
+    }
+
+    private boolean inside(UUID world, Point at) {
+        Optional<ChunkRange> area = tools.views().area(world);
+        return area.isPresent() && ChunkKey.containing(at.x(), at.z()).filter(area.get()::contains).isPresent();
     }
 }

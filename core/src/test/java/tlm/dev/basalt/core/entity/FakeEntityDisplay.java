@@ -9,32 +9,40 @@ final class FakeEntityDisplay implements EntityDisplay {
     final List<String> events = new ArrayList<>();
 
     @Override
-    public void spawn(UUID player, VirtualEntity entity) {
-        events.add("spawn #" + entity.id() + " " + entity.type() + " health " + entity.health());
+    public void spawn(UUID viewer, VirtualEntity entity) {
+        events.add(name(viewer) + ": spawn #" + entity.id() + " " + entity.type() + " health " + entity.health());
     }
 
     @Override
-    public void move(UUID player, VirtualEntity entity) {
-        events.add("move #" + entity.id() + " to " + entity.position().x() + " " + entity.position().z());
+    public void move(UUID viewer, VirtualEntity entity) {
+        events.add(name(viewer) + ": move #" + entity.id() + " to " + entity.position().x() + " " + entity.position().z());
     }
 
     @Override
-    public void hurt(UUID player, VirtualEntity entity) {
-        events.add("hurt #" + entity.id() + " health " + entity.health());
+    public void hurt(UUID viewer, VirtualEntity entity, UUID attacker) {
+        events.add(name(viewer) + ": hurt #" + entity.id() + " health " + entity.health() + " by " + name(attacker));
     }
 
     @Override
-    public void die(UUID player, VirtualEntity entity) {
-        events.add("die #" + entity.id());
+    public void die(UUID viewer, VirtualEntity entity, UUID attacker) {
+        events.add(name(viewer) + ": die #" + entity.id() + " by " + name(attacker));
     }
 
     @Override
-    public void remove(UUID player, List<Integer> ids) {
-        events.add("remove " + ids);
+    public void remove(UUID viewer, List<Integer> ids) {
+        events.add(name(viewer) + ": remove " + ids);
     }
 
     @Override
-    public void removeDead(UUID player, List<Integer> ids) {
-        events.add("remove dead " + ids);
+    public void removeDead(UUID viewer, List<Integer> ids) {
+        events.add(name(viewer) + ": remove dead " + ids);
+    }
+
+    static String name(UUID player) {
+        return switch ((int) player.getLeastSignificantBits()) {
+            case 0xA -> "A";
+            case 0xB -> "B";
+            default -> "C";
+        };
     }
 }

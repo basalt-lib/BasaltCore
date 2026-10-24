@@ -1,17 +1,22 @@
 package tlm.dev.basalt.core.entity;
 
+import tlm.dev.basalt.core.position.ChunkKey;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
-final class PlayerEntities {
+final class WorldEntities {
 
     private static final long NEVER = Long.MIN_VALUE;
 
     private final Map<Integer, Tracked> entities = new LinkedHashMap<>();
+    private final Map<Hit, Long> lastHits = new HashMap<>();
     private int hits;
     private int uses;
 
@@ -53,22 +58,29 @@ final class PlayerEntities {
         return Optional.ofNullable(newest);
     }
 
-    List<VirtualEntity> allLiving() {
-        return entities.values().stream().map(Tracked::entity).filter(entity -> !entity.isDead()).toList();
+    List<VirtualEntity> livingIn(ChunkKey chunk) {
+        return entities.values().stream().map(Tracked::entity)
+                .filter(entity -> !entity.isDead())
+                .filter(entity -> ChunkKey.containing(entity.position().x(), entity.position().z()).filter(chunk::equals).isPresent())
+                .toList();
     }
 
     void replace(VirtualEntity entity) {
         entities.get(entity.id()).entity = entity;
     }
 
-    boolean coolingDown(int id, long now, int cooldown) {
-        long last = entities.get(id).lastHit;
+    boolean coolingDown(UUID player, int id, long now, int cooldown) {
+        long last = lastHits.getOrDefault(new Hit(player, id), NEVER);
         return last != NEVER && now - last < cooldown;
     }
 
-    void hit(int id, long now) {
-        entities.get(id).lastHit = now;
+    void hit(UUID player, int id, long now) {
+        lastHits.put(new Hit(player, id), now);
         hits++;
+    }
+
+    void forgetHitsOf(UUID player) {
+        lastHits.keySet().removeIf(hit -> hit.player().equals(player));
     }
 
     void died(int id, long now) {
@@ -88,6 +100,7 @@ final class PlayerEntities {
             }
             return gone;
         });
+        lastHits.keySet().removeIf(hit -> removed.contains(hit.entity()));
         return removed;
     }
 
@@ -99,10 +112,12 @@ final class PlayerEntities {
         return uses;
     }
 
+    private record Hit(UUID player, int entity) {
+    }
+
     private static final class Tracked {
 
         private VirtualEntity entity;
-        private long lastHit = NEVER;
         private long diedAt = NEVER;
 
         private Tracked(VirtualEntity entity) {

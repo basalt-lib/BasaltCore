@@ -5,15 +5,15 @@ import java.util.UUID;
 
 public interface EntityDisplay {
 
-    void spawn(UUID player, VirtualEntity entity);
+    void spawn(UUID viewer, VirtualEntity entity);
 
-    void move(UUID player, VirtualEntity entity);
+    void move(UUID viewer, VirtualEntity entity);
 
-    void hurt(UUID player, VirtualEntity entity);
+    void hurt(UUID viewer, VirtualEntity entity, UUID attacker);
 
-    void die(UUID player, VirtualEntity entity);
+    void die(UUID viewer, VirtualEntity entity, UUID attacker);
 
-    void remove(UUID player, List<Integer> ids);
+    void remove(UUID viewer, List<Integer> ids);
 
-    void removeDead(UUID player, List<Integer> ids);
+    void removeDead(UUID viewer, List<Integer> ids);
 }

@@ -19,6 +19,7 @@ import tlm.dev.basalt.core.visibility.EntityMasking;
 import tlm.dev.basalt.core.visibility.ViewChanges;
 import tlm.dev.basalt.core.world.VirtualWorlds;
 import tlm.dev.basalt.core.world.WorldChunks;
+import tlm.dev.basalt.core.world.WorldListener;
 import tlm.dev.basalt.core.world.WorldSettings;
 import tlm.dev.basalt.core.world.WorldTools;
 import tlm.dev.basalt.nms.MojangChunkViews;
@@ -87,15 +88,16 @@ public final class BasaltPlugin extends JavaPlugin {
         AtomicReference<ChunkViews> viewsOnceCreated = new AtomicReference<>();
         AtomicReference<VirtualWorlds<?>> worldsOnceCreated = new AtomicReference<>();
         InteractionReplies replies = MojangInteractions.replies(getServer());
+        VirtualEntityService entities = new VirtualEntityService(new EntityTools(MojangEntities.ids(), MojangEntities.display(getServer()),
+                new ChunkEntityViews(viewsOnceCreated::get, worldsOnceCreated::get)), entitySettings);
+        EntityExits entityExits = new EntityExits(entities);
         WorldExits worldExits = new WorldExits(worldsOnceCreated::get, viewsOnceCreated::get);
         WorldChunks<VirtualChunk> chunks = MojangWorlds.chunks(getServer());
         VirtualWorlds<VirtualChunk> worlds = new VirtualWorlds<>(new WorldTools<>(chunks, MojangWorlds.realChunks(getServer()),
-                new ViewWorldViewers(viewsOnceCreated::get, replies), worldExits), worldSettings, UUID::randomUUID);
+                new ViewWorldViewers(viewsOnceCreated::get, replies), WorldListener.both(worldExits, entityExits)), worldSettings, UUID::randomUUID);
         worldsOnceCreated.set(worlds);
-        VirtualEntityService entities = new VirtualEntityService(new EntityTools(MojangEntities.ids(), MojangEntities.display(getServer()),
-                new ChunkEntityViews(viewsOnceCreated::get)), entitySettings);
         ChunkViews views = MojangChunkViews.create(getServer(), queues,
-                ViewChanges.both(masks, ViewChanges.both(new EntityExits(entities), worldExits)), new WorldSource(worlds, chunks, Runnable::run));
+                ViewChanges.both(masks, ViewChanges.both(entityExits, worldExits)), new WorldSource(worlds, chunks, Runnable::run));
         viewsOnceCreated.set(views);
         InteractionService interactions = new InteractionService(new InteractionTools(MojangInteractions.world(getServer()),
                 new ViewBlocks(worlds), new ViewEntities(entities, MojangEntities.shapes()), replies), settings);

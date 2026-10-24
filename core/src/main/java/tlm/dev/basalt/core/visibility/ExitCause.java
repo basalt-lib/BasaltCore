@@ -2,6 +2,7 @@ package tlm.dev.basalt.core.visibility;
 
 public enum ExitCause {
     COMMAND(true, false, false),
+    WORLD_CLOSED(true, false, false),
     WORLD_CHANGE(false, false, false),
     DISCONNECT(false, true, true),
     SHUTDOWN(true, true, false);

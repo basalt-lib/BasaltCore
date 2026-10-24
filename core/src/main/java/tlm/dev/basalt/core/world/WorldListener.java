@@ -10,6 +10,9 @@ public interface WorldListener {
     default void closed(UUID world) {
     }
 
+    default void policyChanged(UUID world) {
+    }
+
     static WorldListener both(WorldListener first, WorldListener second) {
         return new WorldListener() {
             @Override
@@ -22,6 +25,12 @@ public interface WorldListener {
             public void closed(UUID world) {
                 first.closed(world);
                 second.closed(world);
+            }
+
+            @Override
+            public void policyChanged(UUID world) {
+                first.policyChanged(world);
+                second.policyChanged(world);
             }
         };
     }

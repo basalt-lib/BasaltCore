@@ -1,10 +1,11 @@
 package tlm.dev.basalt.api;
 
+import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Thrown by {@link Basalt#createWorld(ChunkArea)} when a real chunk of the area holds a block other than air.
+ * Thrown by {@link Basalt#createWorld(Plugin, ChunkArea)} when a real chunk of the area holds a block other than air.
  * A virtual world stands where the real world is air: a real block there would push or hurt its viewers.
  * The message names the world, the chunk and the first block found.
  */

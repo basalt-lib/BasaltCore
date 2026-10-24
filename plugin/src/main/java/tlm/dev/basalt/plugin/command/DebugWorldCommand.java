@@ -14,6 +14,7 @@ import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import tlm.dev.basalt.api.Basalt;
 import tlm.dev.basalt.api.ChunkArea;
 import tlm.dev.basalt.api.HostAreaException;
@@ -37,13 +38,15 @@ public final class DebugWorldCommand {
     private static final List<String> CORNERS = List.of("cx1", "cz1", "cx2", "cz2");
 
     private final Basalt basalt;
+    private final Plugin plugin;
     private final Server server;
     private final MessageSettings messages;
     private final Map<String, VirtualWorld> named = new LinkedHashMap<>();
 
-    public DebugWorldCommand(Basalt basalt, Server server, MessageSettings messages) {
+    public DebugWorldCommand(Basalt basalt, Plugin plugin, MessageSettings messages) {
         this.basalt = basalt;
-        this.server = server;
+        this.plugin = plugin;
+        this.server = plugin.getServer();
         this.messages = messages;
     }
 
@@ -85,7 +88,7 @@ public final class DebugWorldCommand {
         ChunkArea area = new ChunkArea(world, Math.min(x1, x2), Math.min(z1, z2), Math.max(x1, x2), Math.max(z1, z2));
         VirtualWorld created;
         try {
-            created = basalt.createWorld(area);
+            created = basalt.createWorld(plugin, area);
         } catch (HostAreaException | IllegalArgumentException | IllegalStateException refused) {
             return reply(sender, MessageKey.DEBUG_WORLD_REFUSED, Placeholder.unparsed(WORLD, name),
                     Placeholder.unparsed("reason", String.valueOf(refused.getMessage())));

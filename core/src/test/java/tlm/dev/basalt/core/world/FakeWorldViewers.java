@@ -26,8 +26,8 @@ final class FakeWorldViewers implements WorldViewers, WorldListener {
     }
 
     @Override
-    public void exit(UUID player) {
-        events.add("exit " + name(player));
+    public void exit(UUID player, Departure departure) {
+        events.add("exit " + name(player) + (departure == Departure.CLOSED ? " closed" : ""));
         exitPath.accept(player);
     }
 
@@ -50,6 +50,11 @@ final class FakeWorldViewers implements WorldViewers, WorldListener {
     @Override
     public void closed(UUID world) {
         events.add("closed");
+    }
+
+    @Override
+    public void policyChanged(UUID world) {
+        events.add("policy");
     }
 
     static String name(UUID player) {

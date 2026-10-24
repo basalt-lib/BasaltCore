@@ -12,7 +12,7 @@ public interface WorldViewers {
 
     boolean enter(UUID player, UUID world, ChunkRange area);
 
-    void exit(UUID player);
+    void exit(UUID player, Departure departure);
 
     void blockChanged(Set<UUID> viewers, BlockPosition position, int state);
 

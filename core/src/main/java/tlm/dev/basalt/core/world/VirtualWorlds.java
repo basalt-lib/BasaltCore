@@ -30,7 +30,7 @@ public final class VirtualWorlds<C> {
         this.ids = ids;
     }
 
-    public Creation create(HostArea host, HostRule rule) {
+    public Creation create(HostArea host, HostRule rule, String owner) {
         if (worlds.size() >= settings.maxWorlds()) {
             return new Creation.Refused(CreationRefusal.TOO_MANY_WORLDS, Optional.empty());
         }
@@ -49,7 +49,7 @@ public final class VirtualWorlds<C> {
         if (worlds.containsKey(id)) {
             throw new IllegalStateException("world id " + id + " is already taken");
         }
-        worlds.put(id, WorldSnapshot.empty(id, host));
+        worlds.put(id, WorldSnapshot.empty(new WorldLabel(id, owner, false), host));
         return new Creation.Created(id);
     }
 
@@ -113,7 +113,7 @@ public final class VirtualWorlds<C> {
         if (!world.equals(viewing.get(player))) {
             return false;
         }
-        tools.viewers().exit(player);
+        tools.viewers().exit(player, Departure.REMOVED);
         viewerLeft(world, player);
         return true;
     }
@@ -134,12 +134,39 @@ public final class VirtualWorlds<C> {
             return false;
         }
         for (UUID viewer : snapshot.viewers()) {
-            tools.viewers().exit(viewer);
+            tools.viewers().exit(viewer, Departure.CLOSED);
             forgetViewer(world, viewer);
         }
         worlds.remove(world);
         tools.listener().closed(world);
         return true;
+    }
+
+    public boolean setOpenToEveryone(UUID world, boolean open) {
+        WorldSnapshot<C> snapshot = worlds.get(world);
+        if (snapshot == null) {
+            return false;
+        }
+        if (snapshot.label().openToEveryone() != open) {
+            worlds.put(world, snapshot.withLabel(snapshot.label().withOpenToEveryone(open)));
+            tools.listener().policyChanged(world);
+        }
+        return true;
+    }
+
+    public int closeOwnedBy(String owner) {
+        int closed = 0;
+        for (UUID world : open()) {
+            WorldSnapshot<C> snapshot = worlds.get(world);
+            if (snapshot != null && snapshot.label().owner().equals(owner) && close(world)) {
+                closed++;
+            }
+        }
+        return closed;
+    }
+
+    public WorldSettings settings() {
+        return settings;
     }
 
     public int closeAll() {

@@ -2,6 +2,7 @@ package tlm.dev.basalt.plugin.facade;
 
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
 import tlm.dev.basalt.api.ChunkArea;
 import tlm.dev.basalt.api.VirtualWorld;
@@ -21,11 +22,13 @@ final class WorldFacade implements VirtualWorld {
 
     private final UUID id;
     private final ChunkArea area;
+    private final Plugin owner;
     private final FacadeTools tools;
 
-    WorldFacade(UUID id, ChunkArea area, FacadeTools tools) {
+    WorldFacade(UUID id, ChunkArea area, Plugin owner, FacadeTools tools) {
         this.id = id;
         this.area = area;
+        this.owner = owner;
         this.tools = tools;
     }
 
@@ -39,6 +42,12 @@ final class WorldFacade implements VirtualWorld {
     public ChunkArea area() {
         tools.checkThread();
         return area;
+    }
+
+    @Override
+    public Plugin owner() {
+        tools.checkThread();
+        return owner;
     }
 
     @Override

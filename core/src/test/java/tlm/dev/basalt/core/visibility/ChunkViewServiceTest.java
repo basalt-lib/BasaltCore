@@ -284,7 +284,7 @@ class ChunkViewServiceTest {
         }
         service.show(OTHER, WORLD, ONE_CHUNK);
 
-        assertEquals(List.of("entered 0 0", "left COMMAND", "entered 0 0", "left WORLD_CHANGE",
+        assertEquals(List.of("entered 0 0", "left COMMAND", "entered 0 0", "left WORLD_CLOSED", "entered 0 0", "left WORLD_CHANGE",
                 "entered 0 0", "left DISCONNECT", "entered 0 0", "left SHUTDOWN"), changed);
     }
 

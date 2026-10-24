@@ -31,6 +31,7 @@ class VirtualWorldsTest {
     private static final UUID B = UUID.fromString("00000000-0000-0000-0000-00000000000b");
     private static final UUID C = UUID.fromString("00000000-0000-0000-0000-00000000000c");
     private static final HostArea TWO_BY_TWO = new HostArea(REAL, new ChunkRange(68, 64, 69, 65), -64, 384);
+    private static final String OWNER = "Owner";
     private static final int STONE = 1;
     private static final int GOLD = 2;
 
@@ -52,7 +53,7 @@ class VirtualWorldsTest {
 
     @Test
     void startsEmptyWithoutMaterialisingAnyChunk() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
 
         WorldSnapshot<FakeChunk> snapshot = worlds.snapshot(world).orElseThrow();
         assertEquals(Map.of(), snapshot.chunks());
@@ -63,7 +64,7 @@ class VirtualWorldsTest {
 
     @Test
     void checksEveryRealChunkOfTheAreaForAir() {
-        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
 
         assertEquals(TWO_BY_TWO.chunks().chunks(), realChunksRead);
     }
@@ -74,7 +75,7 @@ class VirtualWorldsTest {
         realBlocks.put(new ChunkKey(69, 65), grass);
         realBlocks.put(new ChunkKey(69, 64), new RealBlock(new BlockPosition(1104, -61, 1024), "minecraft:grass_block"));
 
-        Creation creation = worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY);
+        Creation creation = worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER);
 
         assertEquals(new Creation.Refused(CreationRefusal.REAL_BLOCKS,
                 Optional.of(new RealBlock(new BlockPosition(1104, -61, 1024), "minecraft:grass_block"))), creation);
@@ -85,7 +86,7 @@ class VirtualWorldsTest {
     void canStandOverRealBlocksWhenAskedTo() {
         realBlocks.put(new ChunkKey(68, 64), new RealBlock(new BlockPosition(1088, -61, 1024), "minecraft:grass_block"));
 
-        created(worlds.create(TWO_BY_TWO, HostRule.ANY_BLOCKS));
+        created(worlds.create(TWO_BY_TWO, HostRule.ANY_BLOCKS, OWNER));
 
         assertEquals(List.of(), realChunksRead);
     }
@@ -93,17 +94,17 @@ class VirtualWorldsTest {
     @Test
     void refusesMoreChunksOrWorldsThanTheSettingsAllow() {
         HostArea tooWide = new HostArea(REAL, new ChunkRange(0, 0, 4, 0), -64, 384);
-        assertEquals(new Creation.Refused(CreationRefusal.TOO_MANY_CHUNKS, Optional.empty()), worlds.create(tooWide, HostRule.AIR_ONLY));
+        assertEquals(new Creation.Refused(CreationRefusal.TOO_MANY_CHUNKS, Optional.empty()), worlds.create(tooWide, HostRule.AIR_ONLY, OWNER));
         assertEquals(List.of(), realChunksRead);
 
-        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
-        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
-        assertEquals(new Creation.Refused(CreationRefusal.TOO_MANY_WORLDS, Optional.empty()), worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+        assertEquals(new Creation.Refused(CreationRefusal.TOO_MANY_WORLDS, Optional.empty()), worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
     }
 
     @Test
     void materialisesOnlyTheChunksItChangesAndSharesTheOthers() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         WorldSnapshot<FakeChunk> before = worlds.snapshot(world).orElseThrow();
 
         assertEquals(EditResult.CHANGED, worlds.setBlock(world, new BlockPosition(1090, -54, 1030), STONE));
@@ -122,7 +123,7 @@ class VirtualWorldsTest {
 
     @Test
     void keepsAPublishedSnapshotUnchangeable() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         worlds.setBlock(world, new BlockPosition(1090, -54, 1030), STONE);
         WorldSnapshot<FakeChunk> snapshot = worlds.snapshot(world).orElseThrow();
 
@@ -135,7 +136,7 @@ class VirtualWorldsTest {
 
     @Test
     void refusesABlockOutsideTheAreaOrTheHeight() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
 
         assertEquals(EditResult.OUTSIDE, worlds.setBlock(world, new BlockPosition(1120, -54, 1030), STONE));
         assertEquals(EditResult.OUTSIDE, worlds.setBlock(world, new BlockPosition(1090, 320, 1030), STONE));
@@ -147,7 +148,7 @@ class VirtualWorldsTest {
 
     @Test
     void leavesAnUntouchedChunkUnmaterialised() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
 
         assertEquals(EditResult.UNCHANGED, worlds.setBlock(world, new BlockPosition(1090, -54, 1030), FakeChunk.AIR));
 
@@ -156,7 +157,7 @@ class VirtualWorldsTest {
 
     @Test
     void showsABlockSetThroughTheWorldToEveryViewer() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         worlds.addViewer(world, A);
         worlds.addViewer(world, B);
         viewers.events.clear();
@@ -168,7 +169,7 @@ class VirtualWorldsTest {
 
     @Test
     void showsABlockChangedByAViewerToTheOtherViewersOnly() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         worlds.addViewer(world, A);
         worlds.addViewer(world, B);
         viewers.events.clear();
@@ -183,7 +184,7 @@ class VirtualWorldsTest {
 
     @Test
     void sendsTheChunksAFillChangedAgain() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         worlds.addViewer(world, A);
         worlds.setBlock(world, new BlockPosition(1104, -54, 1024), STONE);
         viewers.events.clear();
@@ -198,8 +199,8 @@ class VirtualWorldsTest {
 
     @Test
     void letsAPlayerViewOneWorldAtATime() {
-        UUID first = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
-        UUID second = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID first = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+        UUID second = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
 
         assertEquals(ViewerResult.ADDED, worlds.addViewer(first, A));
         assertEquals(ViewerResult.ALREADY_VIEWING, worlds.addViewer(second, A));
@@ -213,7 +214,7 @@ class VirtualWorldsTest {
 
     @Test
     void forgetsAViewerWhoseViewCouldNotOpen() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         viewers.withoutView.add(A);
 
         assertEquals(ViewerResult.NO_VIEW, worlds.addViewer(world, A));
@@ -224,7 +225,7 @@ class VirtualWorldsTest {
 
     @Test
     void forgetsAViewerWhoLeftThroughTheExitPath() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         worlds.addViewer(world, A);
         worlds.addViewer(world, B);
         viewers.events.clear();
@@ -242,7 +243,7 @@ class VirtualWorldsTest {
 
     @Test
     void removesOneViewerThroughTheExitPath() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         worlds.addViewer(world, A);
         worlds.addViewer(world, B);
         viewers.events.clear();
@@ -258,7 +259,7 @@ class VirtualWorldsTest {
 
     @Test
     void closingSendsEveryViewerBackThenForgetsTheWorld() {
-        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         worlds.addViewer(world, A);
         worlds.addViewer(world, B);
         worlds.setBlock(world, new BlockPosition(1090, -54, 1030), STONE);
@@ -267,7 +268,7 @@ class VirtualWorldsTest {
         assertTrue(worlds.close(world));
         assertFalse(worlds.close(world));
 
-        assertEquals(List.of("exit A", "exit B", "emptied", "closed"), sorted(viewers.events));
+        assertEquals(List.of("exit A closed", "exit B closed", "emptied", "closed"), sorted(viewers.events));
         assertEquals(Optional.empty(), worlds.snapshot(world));
         assertEquals(Optional.empty(), worlds.worldOf(A));
         assertEquals(OptionalInt.empty(), worlds.blockAt(world, new BlockPosition(1090, -54, 1030)));
@@ -278,8 +279,8 @@ class VirtualWorldsTest {
 
     @Test
     void closesEveryWorldAtOnce() {
-        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
-        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+        created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
 
         assertEquals(2, worlds.closeAll());
         assertEquals(List.of(), worlds.open());
@@ -288,8 +289,8 @@ class VirtualWorldsTest {
 
     @Test
     void keepsOverlappingWorldsApart() {
-        UUID first = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
-        UUID second = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY));
+        UUID first = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+        UUID second = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         worlds.addViewer(first, A);
         worlds.addViewer(second, B);
         viewers.events.clear();
@@ -299,6 +300,43 @@ class VirtualWorldsTest {
         assertEquals(List.of("block 1090 -54 1030 = 1 to []"), viewers.events);
         assertEquals(OptionalInt.of(STONE), worlds.blockSeenBy(A, new BlockPosition(1090, -54, 1030)));
         assertEquals(OptionalInt.of(FakeChunk.AIR), worlds.blockSeenBy(B, new BlockPosition(1090, -54, 1030)));
+    }
+
+    @Test
+    void labelsAWorldWithItsOwnerAndKeepsItClosedToOthersByDefault() {
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, "Dungeons"));
+
+        assertEquals(new WorldLabel(world, "Dungeons", false), worlds.snapshot(world).orElseThrow().label());
+    }
+
+    @Test
+    void opensAWorldToEveryoneAndTellsItOnce() {
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+
+        assertTrue(worlds.setOpenToEveryone(world, true));
+        assertTrue(worlds.setOpenToEveryone(world, true));
+        assertTrue(worlds.snapshot(world).orElseThrow().label().openToEveryone());
+        assertTrue(worlds.setOpenToEveryone(world, false));
+        worlds.close(world);
+        assertFalse(worlds.setOpenToEveryone(world, true));
+
+        assertEquals(List.of("policy", "policy", "closed"), viewers.events);
+    }
+
+    @Test
+    void closesEveryWorldOfAnOwnerThroughTheExitPath() {
+        UUID dungeon = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, "Dungeons"));
+        UUID house = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, "Housing"));
+        worlds.addViewer(dungeon, A);
+        viewers.events.clear();
+
+        assertEquals(1, worlds.closeOwnedBy("Dungeons"));
+        assertEquals(0, worlds.closeOwnedBy("Dungeons"));
+        assertEquals(0, worlds.closeOwnedBy("Nobody"));
+
+        assertEquals(List.of("exit A closed", "emptied", "closed"), viewers.events);
+        assertEquals(List.of(house), worlds.open());
+        assertEquals(Optional.empty(), worlds.worldOf(A));
     }
 
     private static UUID created(Creation creation) {

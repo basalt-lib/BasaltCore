@@ -2,6 +2,7 @@ package tlm.dev.basalt.plugin.facade;
 
 import org.bukkit.World;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import tlm.dev.basalt.api.Basalt;
 import tlm.dev.basalt.api.ChunkArea;
 import tlm.dev.basalt.api.HostAreaException;
@@ -36,12 +37,12 @@ public final class BasaltFacade implements Basalt {
     }
 
     @Override
-    public VirtualWorld createWorld(ChunkArea area) {
-        return create(area, HostRule.AIR_ONLY);
+    public VirtualWorld createWorld(Plugin owner, ChunkArea area) {
+        return create(owner, area, HostRule.AIR_ONLY);
     }
 
-    public VirtualWorld createWorldOverRealBlocks(ChunkArea area) {
-        return create(area, HostRule.ANY_BLOCKS);
+    public VirtualWorld createWorldOverRealBlocks(Plugin owner, ChunkArea area) {
+        return create(owner, area, HostRule.ANY_BLOCKS);
     }
 
     @Override
@@ -59,9 +60,13 @@ public final class BasaltFacade implements Basalt {
         return tools.worlds().worldOf(player.getUniqueId()).map(facades::get).orElse(null);
     }
 
-    private VirtualWorld create(ChunkArea area, HostRule rule) {
+    private VirtualWorld create(Plugin owner, ChunkArea area, HostRule rule) {
         tools.checkThread();
+        Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(area, "area");
+        if (!owner.isEnabled()) {
+            throw new IllegalStateException("the owner " + owner.getName() + " is not enabled");
+        }
         World world = area.world();
         if (tools.server().getWorld(world.getUID()) == null) {
             throw new IllegalStateException("world " + world.getName() + " is not loaded");
@@ -69,9 +74,9 @@ public final class BasaltFacade implements Basalt {
         HostArea host = new HostArea(world.getUID(),
                 new ChunkRange(area.minChunkX(), area.minChunkZ(), area.maxChunkX(), area.maxChunkZ()),
                 world.getMinHeight(), world.getMaxHeight() - world.getMinHeight());
-        return switch (tools.worlds().create(host, rule)) {
+        return switch (tools.worlds().create(host, rule, owner.getName())) {
             case Creation.Created created -> {
-                WorldFacade facade = new WorldFacade(created.world(), area, tools);
+                WorldFacade facade = new WorldFacade(created.world(), area, owner, tools);
                 facades.put(created.world(), facade);
                 yield facade;
             }

@@ -2,6 +2,7 @@ package tlm.dev.basalt.api;
 
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -16,8 +17,9 @@ import java.util.UUID;
  * Changes made through this interface or by a viewer are seen by every viewer.
  * <p>
  * Every method runs on the main server thread only and throws {@link IllegalStateException} on another thread.
- * Get a world from {@link Basalt#createWorld(ChunkArea)}, never implement this interface.
- * A world is not kept: it disappears when it is closed or when BasaltCore stops.
+ * Get a world from {@link Basalt#createWorld(Plugin, ChunkArea)}, never implement this interface.
+ * A world is not kept: it disappears when it is closed, when its owner is disabled or when BasaltCore stops,
+ * never because it has no viewer.
  */
 @ApiStatus.Experimental
 @ApiStatus.NonExtendable
@@ -33,14 +35,21 @@ public interface VirtualWorld {
     /**
      * Returns the area of the real world this world stands on.
      *
-     * @return the area given to {@link Basalt#createWorld(ChunkArea)}
+     * @return the area given to {@link Basalt#createWorld(Plugin, ChunkArea)}
      */
     @NotNull ChunkArea area();
 
     /**
+     * Returns the plugin this world belongs to. Basalt closes the world when this plugin is disabled.
+     *
+     * @return the owner given to {@link Basalt#createWorld(Plugin, ChunkArea)}
+     */
+    @NotNull Plugin owner();
+
+    /**
      * Returns whether this world is closed.
      *
-     * @return true after {@link #close()} or when BasaltCore stopped
+     * @return true after {@link #close()}, the disabling of the owner or the stop of BasaltCore
      */
     boolean isClosed();
 

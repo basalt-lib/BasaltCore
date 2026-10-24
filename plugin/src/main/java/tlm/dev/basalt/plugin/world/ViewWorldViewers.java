@@ -7,6 +7,7 @@ import tlm.dev.basalt.core.position.ChunkRange;
 import tlm.dev.basalt.core.visibility.ChunkViews;
 import tlm.dev.basalt.core.visibility.ExitCause;
 import tlm.dev.basalt.core.visibility.ShowResult;
+import tlm.dev.basalt.core.world.Departure;
 import tlm.dev.basalt.core.world.WorldViewers;
 
 import java.util.List;
@@ -30,8 +31,8 @@ public final class ViewWorldViewers implements WorldViewers {
     }
 
     @Override
-    public void exit(UUID player) {
-        views.get().hide(player, ExitCause.COMMAND);
+    public void exit(UUID player, Departure departure) {
+        views.get().hide(player, departure == Departure.CLOSED ? ExitCause.WORLD_CLOSED : ExitCause.COMMAND);
     }
 
     @Override

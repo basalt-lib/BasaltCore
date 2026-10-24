@@ -1,6 +1,7 @@
 package tlm.dev.basalt.api;
 
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,15 +29,19 @@ public interface Basalt {
     /**
      * Creates an empty virtual world on an area of a real world, with no viewer.
      * Loads the real chunks of the area and checks they hold only air.
+     * The world belongs to its owner: Basalt closes it when the owner is disabled, before the owner's own
+     * {@code onDisable} runs. A world never closes because it has no viewer: it lives until {@link VirtualWorld#close()},
+     * the disabling of its owner or the stop of BasaltCore.
      *
+     * @param owner the enabled plugin the world belongs to
      * @param area the area, at most {@code world.max-chunks} chunks of the BasaltCore config
      * @return the new world
      * @throws HostAreaException if a real chunk of the area holds a block other than air
      * @throws IllegalArgumentException if the area holds more chunks than {@code world.max-chunks}
-     * @throws IllegalStateException if the real world is not loaded, if {@code world.max-worlds} worlds are already open,
-     *                               or if called outside the main thread
+     * @throws IllegalStateException if the owner is not enabled, if the real world is not loaded,
+     *                               if {@code world.max-worlds} worlds are already open, or if called outside the main thread
      */
-    @NotNull VirtualWorld createWorld(@NotNull ChunkArea area);
+    @NotNull VirtualWorld createWorld(@NotNull Plugin owner, @NotNull ChunkArea area);
 
     /**
      * Returns the open virtual worlds.

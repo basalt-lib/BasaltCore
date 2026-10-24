@@ -62,6 +62,9 @@ import tlm.dev.basalt.plugin.listener.WorldChangeListener;
 import tlm.dev.basalt.plugin.masking.EntityScanner;
 import tlm.dev.basalt.plugin.masking.EntityTrackListener;
 import tlm.dev.basalt.plugin.masking.MaskedViewers;
+import tlm.dev.basalt.plugin.masking.PlayerSeparations;
+import tlm.dev.basalt.plugin.masking.SeparationJoinListener;
+import tlm.dev.basalt.plugin.masking.SeparationQuitListener;
 import tlm.dev.basalt.plugin.world.ChunkEncoders;
 import tlm.dev.basalt.plugin.world.OwnerListener;
 import tlm.dev.basalt.plugin.world.ViewSender;
@@ -97,12 +100,13 @@ public final class BasaltPlugin extends JavaPlugin {
                 new ChunkEntityViews(viewsOnceCreated::get, worldsOnceCreated::get)), entitySettings);
         EntityExits entityExits = new EntityExits(entities);
         WorldExits worldExits = new WorldExits(worldsOnceCreated::get, viewsOnceCreated::get);
+        PlayerSeparations separations = new PlayerSeparations(this, worldsOnceCreated::get);
         WorldChunks<VirtualChunk> chunks = MojangWorlds.chunks(getServer());
         VirtualWorlds<VirtualChunk> worlds = new VirtualWorlds<>(new WorldTools<>(chunks, MojangWorlds.realChunks(getServer()),
-                new ViewWorldViewers(viewsOnceCreated::get, replies), WorldListener.both(worldExits, entityExits)), worldSettings, UUID::randomUUID);
+                new ViewWorldViewers(viewsOnceCreated::get, replies), WorldListener.both(WorldListener.both(worldExits, entityExits), separations)), worldSettings, UUID::randomUUID);
         worldsOnceCreated.set(worlds);
         ChunkViews views = MojangChunkViews.create(getServer(), queues,
-                ViewChanges.both(masks, ViewChanges.both(entityExits, worldExits)), new WorldSource(worlds, chunks, encoders));
+                ViewChanges.both(masks, ViewChanges.both(entityExits, ViewChanges.both(worldExits, separations))), new WorldSource(worlds, chunks, encoders));
         viewsOnceCreated.set(views);
         InteractionService interactions = new InteractionService(new InteractionTools(MojangInteractions.world(getServer()),
                 new ViewBlocks(worlds), new ViewEntities(entities, MojangEntities.shapes()), replies), settings);
@@ -113,6 +117,7 @@ public final class BasaltPlugin extends JavaPlugin {
                 encoders,
                 new EntityTicker(this, entities),
                 new WorldSessions(worlds, getLogger()),
+                separations,
                 new ViewSessions(views, getServer(), getLogger()),
                 flyingKicks,
                 new ViewSender(this, views, WorldSettingsParser.chunkSendsPerTick(reader)),
@@ -125,6 +130,8 @@ public final class BasaltPlugin extends JavaPlugin {
         plugins.registerEvents(new InteractionSessions(queues, interactions), this);
         plugins.registerEvents(new EntityTrackListener(masks), this);
         plugins.registerEvents(new OwnerListener(this, worlds), this);
+        plugins.registerEvents(new SeparationJoinListener(separations), this);
+        plugins.registerEvents(new SeparationQuitListener(separations), this);
         DebugCommands commands = new DebugCommands(new DebugChunkCommand(basalt, area -> basalt.createWorldOverRealBlocks(this, area), getServer(), messages),
                 new DebugEntityCommand(entities, entitySettings, getServer(), messages), new DebugWorldCommand(basalt, this, messages));
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> event.registrar().register(commands.node()));

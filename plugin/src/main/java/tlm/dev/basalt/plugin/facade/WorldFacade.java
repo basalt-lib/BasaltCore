@@ -5,6 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
 import tlm.dev.basalt.api.ChunkArea;
+import tlm.dev.basalt.api.PlayerVisibility;
 import tlm.dev.basalt.api.VirtualWorld;
 import tlm.dev.basalt.core.position.BlockBox;
 import tlm.dev.basalt.core.position.BlockPosition;
@@ -131,6 +132,20 @@ final class WorldFacade implements VirtualWorld {
             }
         }
         return Set.copyOf(viewers);
+    }
+
+    @Override
+    public PlayerVisibility playerVisibility() {
+        open();
+        boolean everyone = tools.worlds().snapshot(id).map(snapshot -> snapshot.label().openToEveryone()).orElse(false);
+        return everyone ? PlayerVisibility.EVERYONE : PlayerVisibility.WORLD_ONLY;
+    }
+
+    @Override
+    public void setPlayerVisibility(PlayerVisibility visibility) {
+        open();
+        Objects.requireNonNull(visibility, "visibility");
+        tools.worlds().setOpenToEveryone(id, visibility == PlayerVisibility.EVERYONE);
     }
 
     @Override

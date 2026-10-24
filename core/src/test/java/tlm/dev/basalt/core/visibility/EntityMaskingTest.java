@@ -77,6 +77,14 @@ class EntityMaskingTest {
     }
 
     @Test
+    void leavesThePlayersToTheSeparationRule() {
+        RealEntity player = new RealEntity(STAND, IN_ARENA, true);
+
+        assertFalse(EntityMasking.hides(VIEWER, Optional.of(ARENA), player));
+        assertTrue(masking.decide(VIEWER, Optional.of(ARENA), List.of(player), Set.of()).isEmpty());
+    }
+
+    @Test
     void hidesOnlyWhatStandsInTheVirtualChunk() {
         EntityMask mask = masking.decide(VIEWER, Optional.of(ARENA),
                 List.of(new RealEntity(STAND, IN_ARENA), new RealEntity(COW, IN_NEIGHBOUR)), Set.of());

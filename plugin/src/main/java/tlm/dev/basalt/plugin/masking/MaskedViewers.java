@@ -146,7 +146,7 @@ public final class MaskedViewers implements ViewChanges {
 
     private static RealEntity real(Entity entity) {
         Location at = entity.getLocation();
-        return new RealEntity(entity.getUniqueId(), new Point(at.getX(), at.getY(), at.getZ()));
+        return new RealEntity(entity.getUniqueId(), new Point(at.getX(), at.getY(), at.getZ()), entity instanceof Player);
     }
 
     private static final class Viewer {

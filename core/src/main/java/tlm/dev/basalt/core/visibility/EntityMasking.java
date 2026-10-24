@@ -22,7 +22,7 @@ public final class EntityMasking {
     }
 
     public static boolean hides(UUID viewer, Optional<ChunkRange> area, RealEntity entity) {
-        return !entity.id().equals(viewer) && area.filter(entity::isIn).isPresent();
+        return !entity.player() && !entity.id().equals(viewer) && area.filter(entity::isIn).isPresent();
     }
 
     public EntityMask decide(UUID viewer, Optional<ChunkRange> area, Collection<RealEntity> nearby, Set<UUID> hidden) {

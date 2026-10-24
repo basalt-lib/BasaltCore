@@ -123,6 +123,22 @@ public interface VirtualWorld {
     @NotNull @Unmodifiable Set<Player> viewers();
 
     /**
+     * Returns which players the viewers of this world see.
+     *
+     * @return the visibility of the players, {@link PlayerVisibility#WORLD_ONLY} until changed
+     * @throws IllegalStateException if the world is closed
+     */
+    @NotNull PlayerVisibility playerVisibility();
+
+    /**
+     * Sets which players the viewers of this world see, and applies it at once to every player concerned.
+     *
+     * @param visibility the new visibility of the players
+     * @throws IllegalStateException if the world is closed
+     */
+    void setPlayerVisibility(@NotNull PlayerVisibility visibility);
+
+    /**
      * Closes this world. Every viewer gets the real world back and the blocks of this world are freed.
      * Does nothing if the world is already closed.
      */

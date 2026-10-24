@@ -18,6 +18,7 @@ import org.bukkit.plugin.Plugin;
 import tlm.dev.basalt.api.Basalt;
 import tlm.dev.basalt.api.ChunkArea;
 import tlm.dev.basalt.api.HostAreaException;
+import tlm.dev.basalt.api.PlayerVisibility;
 import tlm.dev.basalt.api.VirtualWorld;
 import tlm.dev.basalt.core.debug.DebugPattern;
 import tlm.dev.basalt.plugin.config.MessageKey;
@@ -25,6 +26,7 @@ import tlm.dev.basalt.plugin.config.MessageSettings;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -57,7 +59,28 @@ public final class DebugWorldCommand {
                         .then(Commands.argument(PLAYER, StringArgumentType.word()).executes(this::add))))
                 .then(Commands.literal("remove").then(Commands.argument(PLAYER, StringArgumentType.word()).executes(this::remove)))
                 .then(Commands.literal("close").then(Commands.argument(NAME, StringArgumentType.word()).executes(this::close)))
-                .then(Commands.literal("info").then(Commands.argument(NAME, StringArgumentType.word()).executes(this::info)));
+                .then(Commands.literal("info").then(Commands.argument(NAME, StringArgumentType.word()).executes(this::info)))
+                .then(Commands.literal("visibility").then(visibilities(Commands.argument(NAME, StringArgumentType.word()))));
+    }
+
+    private RequiredArgumentBuilder<CommandSourceStack, String> visibilities(RequiredArgumentBuilder<CommandSourceStack, String> name) {
+        for (PlayerVisibility visibility : PlayerVisibility.values()) {
+            name.then(Commands.literal(label(visibility)).executes(context -> visibility(context, visibility)));
+        }
+        return name;
+    }
+
+    private int visibility(CommandContext<CommandSourceStack> context, PlayerVisibility visibility) {
+        CommandSender sender = context.getSource().getSender();
+        String name = StringArgumentType.getString(context, NAME);
+        Optional<VirtualWorld> world = live(name);
+        if (world.isEmpty()) {
+            return reply(sender, MessageKey.DEBUG_WORLD_UNKNOWN, Placeholder.unparsed(WORLD, name));
+        }
+        world.get().setPlayerVisibility(visibility);
+        sender.sendMessage(messages.render(MessageKey.DEBUG_WORLD_VISIBILITY, Placeholder.unparsed(WORLD, name),
+                Placeholder.unparsed("visibility", label(visibility))));
+        return Command.SINGLE_SUCCESS;
     }
 
     private RequiredArgumentBuilder<CommandSourceStack, Integer> corners() {
@@ -163,7 +186,8 @@ public final class DebugWorldCommand {
                 Placeholder.unparsed("id", world.get().id().toString()), area(world.get().area()),
                 Placeholder.unparsed("chunks", Long.toString(world.get().area().chunkCount())),
                 Placeholder.unparsed("count", Integer.toString(viewers.size())),
-                Placeholder.unparsed("viewers", viewers.isEmpty() ? "none" : String.join(",", viewers))));
+                Placeholder.unparsed("viewers", viewers.isEmpty() ? "none" : String.join(",", viewers)),
+                Placeholder.unparsed("visibility", label(world.get().playerVisibility()))));
         return Command.SINGLE_SUCCESS;
     }
 
@@ -201,6 +225,10 @@ public final class DebugWorldCommand {
                 Placeholder.unparsed("z1", Integer.toString(area.minChunkZ())),
                 Placeholder.unparsed("x2", Integer.toString(area.maxChunkX())),
                 Placeholder.unparsed("z2", Integer.toString(area.maxChunkZ())));
+    }
+
+    private static String label(PlayerVisibility visibility) {
+        return visibility.name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 
     private static IntegerArgumentType coordinate() {

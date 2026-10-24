@@ -11,3 +11,4 @@ world:
   max-chunks: 256
   max-worlds: 64
   max-chunk-sends-per-tick: 16
+  encoder-threads: 2

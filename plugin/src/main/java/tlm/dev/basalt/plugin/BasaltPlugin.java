@@ -60,6 +60,7 @@ import tlm.dev.basalt.plugin.listener.WorldChangeListener;
 import tlm.dev.basalt.plugin.masking.EntityScanner;
 import tlm.dev.basalt.plugin.masking.EntityTrackListener;
 import tlm.dev.basalt.plugin.masking.MaskedViewers;
+import tlm.dev.basalt.plugin.world.ChunkEncoders;
 import tlm.dev.basalt.plugin.world.ViewSender;
 import tlm.dev.basalt.plugin.world.ViewWorldViewers;
 import tlm.dev.basalt.plugin.world.WorldExits;
@@ -88,6 +89,7 @@ public final class BasaltPlugin extends JavaPlugin {
         AtomicReference<ChunkViews> viewsOnceCreated = new AtomicReference<>();
         AtomicReference<VirtualWorlds<?>> worldsOnceCreated = new AtomicReference<>();
         InteractionReplies replies = MojangInteractions.replies(getServer());
+        ChunkEncoders encoders = new ChunkEncoders(WorldSettingsParser.encoderThreads(reader), getLogger());
         VirtualEntityService entities = new VirtualEntityService(new EntityTools(MojangEntities.ids(), MojangEntities.display(getServer()),
                 new ChunkEntityViews(viewsOnceCreated::get, worldsOnceCreated::get)), entitySettings);
         EntityExits entityExits = new EntityExits(entities);
@@ -97,7 +99,7 @@ public final class BasaltPlugin extends JavaPlugin {
                 new ViewWorldViewers(viewsOnceCreated::get, replies), WorldListener.both(worldExits, entityExits)), worldSettings, UUID::randomUUID);
         worldsOnceCreated.set(worlds);
         ChunkViews views = MojangChunkViews.create(getServer(), queues,
-                ViewChanges.both(masks, ViewChanges.both(entityExits, worldExits)), new WorldSource(worlds, chunks, Runnable::run));
+                ViewChanges.both(masks, ViewChanges.both(entityExits, worldExits)), new WorldSource(worlds, chunks, encoders));
         viewsOnceCreated.set(views);
         InteractionService interactions = new InteractionService(new InteractionTools(MojangInteractions.world(getServer()),
                 new ViewBlocks(worlds), new ViewEntities(entities, MojangEntities.shapes()), replies), settings);
@@ -105,6 +107,7 @@ public final class BasaltPlugin extends JavaPlugin {
         FlyingKickListener flyingKicks = new FlyingKickListener(views, getLogger());
         lifecycle = new LifecycleManager(List.of(
                 new ServiceRegistration(getServer().getServicesManager(), this, basalt),
+                encoders,
                 new EntityTicker(this, entities),
                 new WorldSessions(worlds, getLogger()),
                 new ViewSessions(views, getServer(), getLogger()),

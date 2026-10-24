@@ -7,7 +7,9 @@ public final class WorldSettingsParser {
     public static final String MAX_CHUNKS = "world.max-chunks";
     public static final String MAX_WORLDS = "world.max-worlds";
     public static final String MAX_CHUNK_SENDS_PER_TICK = "world.max-chunk-sends-per-tick";
+    public static final String ENCODER_THREADS = "world.encoder-threads";
     public static final int SENDS_PER_TICK_LIMIT = 4096;
+    public static final int ENCODER_THREADS_LIMIT = 16;
 
     private WorldSettingsParser() {
     }
@@ -20,5 +22,9 @@ public final class WorldSettingsParser {
 
     public static int chunkSendsPerTick(ConfigReader config) {
         return config.wholeNumber(MAX_CHUNK_SENDS_PER_TICK, 1, SENDS_PER_TICK_LIMIT);
+    }
+
+    public static int encoderThreads(ConfigReader config) {
+        return config.wholeNumber(ENCODER_THREADS, 1, ENCODER_THREADS_LIMIT);
     }
 }

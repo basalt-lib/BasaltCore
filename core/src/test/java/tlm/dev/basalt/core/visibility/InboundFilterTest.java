@@ -6,15 +6,17 @@ import org.junit.jupiter.params.provider.EnumSource;
 import tlm.dev.basalt.core.position.BlockFace;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class InboundFilterTest {
 
-    private static final ViewSnapshot<String> VIRTUAL = ViewSnapshot.virtual(new ChunkKey(64, 64), "copy");
+    private static final ViewSnapshot VIRTUAL = ViewSnapshot.of(new UUID(0, 1), ChunkRange.of(new ChunkKey(64, 64)));
     private static final BlockPosition INSIDE = new BlockPosition(1029, -58, 1029);
     private static final BlockPosition EAST_EDGE = new BlockPosition(1039, -58, 1029);
     private static final BlockPosition WEST_OUTSIDE = new BlockPosition(1023, -58, 1029);
@@ -57,7 +59,7 @@ class InboundFilterTest {
 
     @Test
     void consumesOnlyAnInteractionWithAnEntityOfTheView() {
-        ViewSnapshot<String> withZombie = VIRTUAL.withEntities(Set.of(1001));
+        ViewSnapshot withZombie = VIRTUAL.withEntities(Set.of(1001));
 
         assertEquals(InboundVerdict.CONSUME, InboundFilter.decide(InboundFacts.entity(1001), withZombie));
         assertEquals(InboundVerdict.PASS, InboundFilter.decide(InboundFacts.entity(1002), withZombie));

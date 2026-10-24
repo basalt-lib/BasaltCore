@@ -1,28 +1,25 @@
 package tlm.dev.basalt.core.visibility;
 
-import tlm.dev.basalt.core.debug.DebugPattern;
-import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 
-final class FakeDisplay implements ViewDisplay<String> {
+final class FakeDisplay implements ViewDisplay {
 
     final List<String> events = new ArrayList<>();
-    final Map<UUID, PlayerView<String>> attached = new HashMap<>();
+    final Map<UUID, PlayerView> attached = new HashMap<>();
     final Set<ChunkKey> clientChunks = new HashSet<>();
-    DebugPattern builtPattern;
-    final Map<BlockPosition, Integer> blocks = new HashMap<>();
+    final Set<ChunkKey> encoding = new HashSet<>();
 
     @Override
-    public void attach(UUID player, PlayerView<String> view) {
+    public void attach(UUID player, PlayerView view) {
         attached.put(player, view);
         events.add("attach");
     }
@@ -34,20 +31,20 @@ final class FakeDisplay implements ViewDisplay<String> {
     }
 
     @Override
-    public boolean hasChunk(UUID player, ChunkKey chunk) {
-        return clientChunks.contains(chunk);
+    public List<ChunkKey> chunksHeld(UUID player, ChunkRange area) {
+        return area.chunks().stream().filter(clientChunks::contains).toList();
     }
 
     @Override
-    public String buildVirtual(UUID player, ChunkKey chunk, DebugPattern pattern) {
-        events.add("build " + chunk.x() + " " + chunk.z());
-        builtPattern = pattern;
-        return "V" + chunk.x() + chunk.z();
-    }
-
-    @Override
-    public void sendVirtual(UUID player, String payload) {
-        events.add("send " + payload + " while " + state(player));
+    public ChunkSend sendVirtual(UUID player, UUID world, ChunkKey chunk) {
+        if (!clientChunks.contains(chunk)) {
+            return ChunkSend.GONE;
+        }
+        if (encoding.contains(chunk)) {
+            return ChunkSend.PENDING;
+        }
+        events.add("send " + chunk.x() + " " + chunk.z() + " while " + state(player));
+        return ChunkSend.SENT;
     }
 
     @Override
@@ -61,23 +58,12 @@ final class FakeDisplay implements ViewDisplay<String> {
     }
 
     @Override
-    public OptionalInt blockAt(String copy, BlockPosition position) {
-        if (position.y() < -64 || position.y() >= 320) {
-            return OptionalInt.empty();
-        }
-        return OptionalInt.of(blocks.getOrDefault(position, 0));
-    }
-
-    @Override
-    public String withBlock(UUID player, String copy, BlockPosition position, int state) {
-        blocks.put(position, state);
-        String changed = copy + "+" + state;
-        events.add("encode " + changed + " while " + state(player));
-        return changed;
+    public void release(UUID world) {
+        events.add("release");
     }
 
     private String state(UUID player) {
-        PlayerView<String> view = attached.get(player);
+        PlayerView view = attached.get(player);
         return view == null ? "detached" : view.snapshot().isVirtual() ? "virtual" : "real";
     }
 }

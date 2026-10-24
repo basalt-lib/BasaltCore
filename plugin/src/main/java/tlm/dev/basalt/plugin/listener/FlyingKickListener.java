@@ -28,7 +28,7 @@ public final class FlyingKickListener implements Listener, Lifecycle {
             return;
         }
         Location at = event.getPlayer().getLocation();
-        if (MovementPolicy.relaxes(views.virtualChunk(event.getPlayer().getUniqueId()), at.getX(), at.getZ())) {
+        if (MovementPolicy.relaxes(views.area(event.getPlayer().getUniqueId()), at.getX(), at.getZ())) {
             event.setCancelled(true);
             cancelled++;
         }

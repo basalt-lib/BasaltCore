@@ -2,6 +2,7 @@ package tlm.dev.basalt.core.visibility;
 
 import org.junit.jupiter.api.Test;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.Optional;
 
@@ -10,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MovementPolicyTest {
 
-    private static final Optional<ChunkKey> ORIGIN = Optional.of(new ChunkKey(0, 0));
+    private static final Optional<ChunkRange> ORIGIN = Optional.of(ChunkRange.of(new ChunkKey(0, 0)));
 
     @Test
     void relaxesNothingInTheRealWorld() {
@@ -20,7 +21,7 @@ class MovementPolicyTest {
     @Test
     void relaxesAPlayerStandingInsideTheVirtualChunk() {
         assertTrue(MovementPolicy.relaxes(ORIGIN, 8.5, 8.5));
-        assertTrue(MovementPolicy.relaxes(Optional.of(new ChunkKey(64, 64)), 1032.5, 1032.5));
+        assertTrue(MovementPolicy.relaxes(Optional.of(ChunkRange.of(new ChunkKey(64, 64))), 1032.5, 1032.5));
     }
 
     @Test
@@ -36,5 +37,16 @@ class MovementPolicyTest {
         assertFalse(MovementPolicy.relaxes(ORIGIN, -0.4, 8));
         assertFalse(MovementPolicy.relaxes(ORIGIN, 8, -0.31));
         assertFalse(MovementPolicy.relaxes(ORIGIN, 40, 40));
+    }
+
+    @Test
+    void relaxesAPlayerAnywhereOverAnAreaOfSeveralChunks() {
+        Optional<ChunkRange> area = Optional.of(new ChunkRange(68, 64, 69, 65));
+
+        assertTrue(MovementPolicy.relaxes(area, 1105.5, 1050.5));
+        assertTrue(MovementPolicy.relaxes(area, 1104.0, 1040.0));
+        assertTrue(MovementPolicy.relaxes(area, 1087.8, 1030.0));
+        assertFalse(MovementPolicy.relaxes(area, 1087.6, 1030.0));
+        assertFalse(MovementPolicy.relaxes(area, 1105.5, 1056.4));
     }
 }

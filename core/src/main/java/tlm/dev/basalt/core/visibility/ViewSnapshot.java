@@ -1,46 +1,44 @@
 package tlm.dev.basalt.core.visibility;
 
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.Set;
+import java.util.UUID;
 
-public record ViewSnapshot<T>(ChunkKey virtualChunk, T virtualPayload, Set<Integer> virtualEntities) {
+public record ViewSnapshot(UUID world, ChunkRange area, Set<Integer> virtualEntities) {
 
     public ViewSnapshot {
-        if ((virtualChunk == null) != (virtualPayload == null)) {
-            throw new IllegalArgumentException("a virtual chunk and its payload go together");
+        if ((world == null) != (area == null)) {
+            throw new IllegalArgumentException("a virtual world and its area go together");
         }
         virtualEntities = Set.copyOf(virtualEntities);
-        if (virtualChunk == null && !virtualEntities.isEmpty()) {
+        if (world == null && !virtualEntities.isEmpty()) {
             throw new IllegalArgumentException("virtual entities live in a virtual view");
         }
     }
 
-    public static <T> ViewSnapshot<T> real() {
-        return new ViewSnapshot<>(null, null, Set.of());
+    public static ViewSnapshot real() {
+        return new ViewSnapshot(null, null, Set.of());
     }
 
-    public static <T> ViewSnapshot<T> virtual(ChunkKey chunk, T payload) {
-        if (chunk == null || payload == null) {
-            throw new IllegalArgumentException("a virtual view needs a chunk and a payload");
+    public static ViewSnapshot of(UUID world, ChunkRange area) {
+        if (world == null || area == null) {
+            throw new IllegalArgumentException("a virtual view needs a world and its area");
         }
-        return new ViewSnapshot<>(chunk, payload, Set.of());
+        return new ViewSnapshot(world, area, Set.of());
     }
 
-    public ViewSnapshot<T> withPayload(T payload) {
-        return new ViewSnapshot<>(virtualChunk, payload, virtualEntities);
-    }
-
-    public ViewSnapshot<T> withEntities(Set<Integer> ids) {
-        return new ViewSnapshot<>(virtualChunk, virtualPayload, ids);
+    public ViewSnapshot withEntities(Set<Integer> ids) {
+        return new ViewSnapshot(world, area, ids);
     }
 
     public boolean isVirtual() {
-        return virtualChunk != null;
+        return world != null;
     }
 
     public boolean hides(ChunkKey chunk) {
-        return virtualChunk != null && virtualChunk.equals(chunk);
+        return area != null && chunk != null && area.contains(chunk);
     }
 
     public boolean holdsEntity(int id) {

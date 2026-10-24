@@ -1,6 +1,6 @@
 package tlm.dev.basalt.core.visibility;
 
-import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -21,18 +21,18 @@ public final class EntityMasking {
         this.maxChangesPerScan = maxChangesPerScan;
     }
 
-    public static boolean hides(UUID viewer, Optional<ChunkKey> virtualChunk, RealEntity entity) {
-        return !entity.id().equals(viewer) && virtualChunk.filter(entity::isIn).isPresent();
+    public static boolean hides(UUID viewer, Optional<ChunkRange> area, RealEntity entity) {
+        return !entity.id().equals(viewer) && area.filter(entity::isIn).isPresent();
     }
 
-    public EntityMask decide(UUID viewer, Optional<ChunkKey> virtualChunk, Collection<RealEntity> nearby, Set<UUID> hidden) {
-        if (virtualChunk.isEmpty()) {
+    public EntityMask decide(UUID viewer, Optional<ChunkRange> area, Collection<RealEntity> nearby, Set<UUID> hidden) {
+        if (area.isEmpty()) {
             return new EntityMask(List.of(), List.copyOf(hidden));
         }
         Set<UUID> inside = new HashSet<>();
         List<UUID> hide = new ArrayList<>();
         for (RealEntity entity : nearby) {
-            if (!hides(viewer, virtualChunk, entity)) {
+            if (!hides(viewer, area, entity)) {
                 continue;
             }
             inside.add(entity.id());

@@ -2,6 +2,7 @@ package tlm.dev.basalt.core.visibility;
 
 import org.junit.jupiter.api.Test;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.Optional;
 import java.util.Set;
@@ -14,7 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PlayerViewTest {
 
-    private final PlayerView<String> view = new PlayerView<>();
+    private static final UUID WORLD = new UUID(0, 1);
+    private static final UUID OTHER_WORLD = new UUID(0, 2);
+    private static final ChunkRange AREA = new ChunkRange(1, 2, 2, 2);
+
+    private final PlayerView view = new PlayerView();
 
     @Test
     void startsInTheRealWorld() {
@@ -22,20 +27,20 @@ class PlayerViewTest {
     }
 
     @Test
-    void publishesTheVirtualChunkWithItsPayload() {
-        assertTrue(view.enter(new ChunkKey(1, 2), "payload"));
+    void publishesTheWorldWithItsArea() {
+        assertTrue(view.enter(WORLD, AREA));
 
         assertTrue(view.snapshot().hides(new ChunkKey(1, 2)));
-        assertEquals("payload", view.snapshot().virtualPayload());
+        assertTrue(view.snapshot().hides(new ChunkKey(2, 2)));
+        assertEquals(WORLD, view.snapshot().world());
     }
 
     @Test
-    void publishesItsEntitiesAndKeepsThemAcrossACopyChange() {
+    void publishesItsEntitiesUntilItLeaves() {
         assertFalse(view.publishEntities(Set.of(1001)));
 
-        view.enter(new ChunkKey(1, 2), "copy");
+        view.enter(WORLD, AREA);
         assertTrue(view.publishEntities(Set.of(1001)));
-        view.update("changed copy");
 
         assertTrue(view.snapshot().holdsEntity(1001));
         view.exit();
@@ -44,26 +49,26 @@ class PlayerViewTest {
     }
 
     @Test
-    void keepsTheFirstVirtualChunk() {
-        view.enter(new ChunkKey(1, 2), "first");
+    void keepsTheFirstWorld() {
+        view.enter(WORLD, AREA);
 
-        assertFalse(view.enter(new ChunkKey(3, 4), "second"));
-        assertEquals("first", view.snapshot().virtualPayload());
+        assertFalse(view.enter(OTHER_WORLD, ChunkRange.of(new ChunkKey(3, 4))));
+        assertEquals(WORLD, view.snapshot().world());
     }
 
     @Test
-    void returnsTheChunkItLeaves() {
-        view.enter(new ChunkKey(1, 2), "payload");
+    void returnsTheViewItLeaves() {
+        view.enter(WORLD, AREA);
 
-        assertEquals(Optional.of(new ChunkKey(1, 2)), view.exit());
+        assertEquals(Optional.of(ViewSnapshot.of(WORLD, AREA)), view.exit());
         assertFalse(view.snapshot().isVirtual());
         assertEquals(Optional.empty(), view.exit());
     }
 
     @Test
     void neverChangesAPublishedSnapshot() {
-        view.enter(new ChunkKey(1, 2), "payload");
-        ViewSnapshot<String> published = view.snapshot();
+        view.enter(WORLD, AREA);
+        ViewSnapshot published = view.snapshot();
 
         view.exit();
 
@@ -71,24 +76,11 @@ class PlayerViewTest {
     }
 
     @Test
-    void replacesThePayloadOfTheSameVirtualChunk() {
-        assertFalse(view.update("too early"));
-        view.enter(new ChunkKey(1, 2), "payload");
-        ViewSnapshot<String> before = view.snapshot();
-
-        assertTrue(view.update("changed"));
-
-        assertEquals(new ChunkKey(1, 2), view.snapshot().virtualChunk());
-        assertEquals("changed", view.snapshot().virtualPayload());
-        assertEquals("payload", before.virtualPayload());
-    }
-
-    @Test
     void keepsOneViewPerPlayer() {
-        PlayerViews<String> views = new PlayerViews<>();
+        PlayerViews views = new PlayerViews();
         UUID player = UUID.randomUUID();
 
-        PlayerView<String> opened = views.open(player);
+        PlayerView opened = views.open(player);
 
         assertSame(opened, views.open(player));
         assertEquals(Optional.of(opened), views.find(player));

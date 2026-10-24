@@ -1,23 +1,29 @@
 package tlm.dev.basalt.core.visibility;
 
-import tlm.dev.basalt.core.debug.DebugPattern;
-import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 
-public final class ChunkViewService<T> implements ChunkViews {
+public final class ChunkViewService implements ChunkViews {
 
-    private final PlayerViews<T> views = new PlayerViews<>();
-    private final ViewDisplay<T> display;
+    private final PlayerViews views = new PlayerViews();
+    private final Map<UUID, Set<ChunkKey>> pending = new HashMap<>();
+    private final ViewDisplay display;
     private final ViewChanges changes;
+    private final ChunkRequests requests;
 
-    public ChunkViewService(ViewDisplay<T> display, ViewChanges changes) {
+    public ChunkViewService(ViewDisplay display, ViewChanges changes, ChunkRequests requests) {
         this.display = display;
         this.changes = changes;
+        this.requests = requests;
     }
 
     @Override
@@ -28,72 +34,33 @@ public final class ChunkViewService<T> implements ChunkViews {
     }
 
     @Override
-    public ShowResult show(UUID player, ChunkKey chunk, DebugPattern pattern) {
-        Optional<PlayerView<T>> found = views.find(player);
+    public ShowResult show(UUID player, UUID world, ChunkRange area) {
+        Optional<PlayerView> found = views.find(player);
         if (found.isEmpty()) {
             return ShowResult.NOT_TRACKED;
         }
-        PlayerView<T> view = found.get();
-        if (view.snapshot().isVirtual()) {
+        if (!found.get().enter(world, area)) {
             return ShowResult.ALREADY_VIRTUAL;
         }
-        T payload = display.buildVirtual(player, chunk, pattern);
-        view.enter(chunk, payload);
-        if (display.hasChunk(player, chunk)) {
-            display.sendVirtual(player, payload);
-        }
-        changes.entered(player, chunk);
+        pending.put(player, new LinkedHashSet<>(display.chunksHeld(player, area)));
+        changes.entered(player, world, area);
         return ShowResult.SHOWN;
     }
 
     @Override
     public HideResult hide(UUID player, ExitCause cause) {
-        Optional<PlayerView<T>> found = views.find(player);
+        Optional<PlayerView> found = views.find(player);
         if (found.isEmpty()) {
             return HideResult.NOT_VIRTUAL;
         }
-        Optional<ChunkKey> left = found.get().exit();
-        left.ifPresent(chunk -> display.restartFlyingCheck(player));
-        left.filter(chunk -> cause.clientKeepsChunks() && display.hasChunk(player, chunk))
-                .ifPresent(chunk -> display.resendReal(player, chunk));
-        left.ifPresent(chunk -> changes.left(player, cause));
+        Optional<ViewSnapshot> left = found.get().exit();
+        pending.remove(player);
+        left.ifPresent(previous -> restore(player, previous, cause));
         if (cause.endsTracking()) {
             views.close(player);
             display.detach(player);
         }
         return left.isPresent() ? HideResult.RESTORED : HideResult.NOT_VIRTUAL;
-    }
-
-    @Override
-    public OptionalInt blockAt(UUID player, BlockPosition position) {
-        Optional<PlayerView<T>> found = views.find(player);
-        if (found.isEmpty() || !found.get().snapshot().hides(position.chunk())) {
-            return OptionalInt.empty();
-        }
-        return display.blockAt(found.get().snapshot().virtualPayload(), position);
-    }
-
-    @Override
-    public boolean setBlock(UUID player, BlockPosition position, int state) {
-        Optional<PlayerView<T>> found = views.find(player);
-        if (found.isEmpty()) {
-            return false;
-        }
-        ViewSnapshot<T> snapshot = found.get().snapshot();
-        if (!snapshot.hides(position.chunk()) || display.blockAt(snapshot.virtualPayload(), position).isEmpty()) {
-            return false;
-        }
-        return found.get().update(display.withBlock(player, snapshot.virtualPayload(), position, state));
-    }
-
-    @Override
-    public boolean publishEntities(UUID player, Set<Integer> ids) {
-        return views.find(player).map(view -> view.publishEntities(ids)).orElse(false);
-    }
-
-    @Override
-    public Optional<ChunkKey> virtualChunk(UUID player) {
-        return views.find(player).map(PlayerView::snapshot).map(ViewSnapshot::virtualChunk);
     }
 
     @Override
@@ -105,5 +72,90 @@ public final class ChunkViewService<T> implements ChunkViews {
             }
         }
         return restored;
+    }
+
+    @Override
+    public Optional<UUID> world(UUID player) {
+        return snapshot(player).map(ViewSnapshot::world);
+    }
+
+    @Override
+    public Optional<ChunkRange> area(UUID player) {
+        return snapshot(player).map(ViewSnapshot::area);
+    }
+
+    @Override
+    public boolean publishEntities(UUID player, Set<Integer> ids) {
+        return views.find(player).map(view -> view.publishEntities(ids)).orElse(false);
+    }
+
+    @Override
+    public void request(UUID player, ChunkKey chunk) {
+        requests.offer(player, chunk);
+    }
+
+    @Override
+    public int sendRequested(int budget) {
+        requests.drain((player, chunk) -> snapshot(player).filter(snapshot -> snapshot.hides(chunk))
+                .ifPresent(snapshot -> pending.computeIfAbsent(player, id -> new LinkedHashSet<>()).add(chunk)));
+        int sent = 0;
+        boolean progress = true;
+        while (sent < budget && progress) {
+            progress = false;
+            for (UUID player : List.copyOf(pending.keySet())) {
+                if (sent >= budget) {
+                    break;
+                }
+                if (sendNext(player)) {
+                    sent++;
+                    progress = true;
+                }
+            }
+        }
+        pending.values().removeIf(Set::isEmpty);
+        return sent;
+    }
+
+    @Override
+    public void release(UUID world) {
+        display.release(world);
+    }
+
+    private boolean sendNext(UUID player) {
+        Optional<ViewSnapshot> snapshot = snapshot(player);
+        Set<ChunkKey> chunks = pending.get(player);
+        if (snapshot.isEmpty()) {
+            chunks.clear();
+            return false;
+        }
+        UUID world = snapshot.get().world();
+        Iterator<ChunkKey> next = chunks.iterator();
+        while (next.hasNext()) {
+            ChunkKey chunk = next.next();
+            ChunkSend result = display.sendVirtual(player, world, chunk);
+            if (result == ChunkSend.PENDING) {
+                continue;
+            }
+            next.remove();
+            if (result == ChunkSend.SENT) {
+                changes.sent(player, world, chunk);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void restore(UUID player, ViewSnapshot previous, ExitCause cause) {
+        display.restartFlyingCheck(player);
+        if (cause.clientKeepsChunks()) {
+            for (ChunkKey chunk : display.chunksHeld(player, previous.area())) {
+                display.resendReal(player, chunk);
+            }
+        }
+        changes.left(player, previous.world(), cause);
+    }
+
+    private Optional<ViewSnapshot> snapshot(UUID player) {
+        return views.find(player).map(PlayerView::snapshot).filter(ViewSnapshot::isVirtual);
     }
 }

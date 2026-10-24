@@ -79,7 +79,7 @@ class ChunkPacketWriterTest {
 
     private static VirtualChunk debugChunk(ChunkKey key, ChunkShape shape) {
         VirtualChunkBuilder builder = new VirtualChunkBuilder(key, shape, TestBlocks.AIR);
-        DebugChunkPattern.paint(DebugPattern.FLAT, builder, block -> TestBlocks.STONE);
+        TestBlocks.paint(DebugPattern.FLAT, builder, block -> TestBlocks.STONE);
         return builder.build(TestBlocks.FORMATS, new TestBlocks(), TestBlocks.PLAINS);
     }
 

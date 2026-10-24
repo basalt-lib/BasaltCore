@@ -7,3 +7,7 @@ entity:
 visibility:
   entity-scan-interval-ticks: 5
   max-entities-per-scan: 256
+world:
+  max-chunks: 256
+  max-worlds: 64
+  max-chunk-sends-per-tick: 16

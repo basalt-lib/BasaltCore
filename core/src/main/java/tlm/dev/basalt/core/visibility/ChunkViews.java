@@ -1,11 +1,9 @@
 package tlm.dev.basalt.core.visibility;
 
-import tlm.dev.basalt.core.debug.DebugPattern;
-import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 
@@ -13,17 +11,21 @@ public interface ChunkViews {
 
     void track(UUID player);
 
-    ShowResult show(UUID player, ChunkKey chunk, DebugPattern pattern);
+    ShowResult show(UUID player, UUID world, ChunkRange area);
 
     HideResult hide(UUID player, ExitCause cause);
 
     int hideAll(ExitCause cause);
 
-    Optional<ChunkKey> virtualChunk(UUID player);
+    Optional<UUID> world(UUID player);
 
-    OptionalInt blockAt(UUID player, BlockPosition position);
-
-    boolean setBlock(UUID player, BlockPosition position, int state);
+    Optional<ChunkRange> area(UUID player);
 
     boolean publishEntities(UUID player, Set<Integer> ids);
+
+    void request(UUID player, ChunkKey chunk);
+
+    int sendRequested(int budget);
+
+    void release(UUID world);
 }

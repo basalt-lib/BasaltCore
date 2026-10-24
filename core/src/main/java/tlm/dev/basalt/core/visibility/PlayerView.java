@@ -1,37 +1,29 @@
 package tlm.dev.basalt.core.visibility;
 
-import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
-public final class PlayerView<T> {
+public final class PlayerView {
 
-    private volatile ViewSnapshot<T> snapshot = ViewSnapshot.real();
+    private volatile ViewSnapshot snapshot = ViewSnapshot.real();
 
-    public ViewSnapshot<T> snapshot() {
+    public ViewSnapshot snapshot() {
         return snapshot;
     }
 
-    public boolean enter(ChunkKey chunk, T payload) {
+    public boolean enter(UUID world, ChunkRange area) {
         if (snapshot.isVirtual()) {
             return false;
         }
-        snapshot = ViewSnapshot.virtual(chunk, payload);
-        return true;
-    }
-
-    public boolean update(T payload) {
-        ViewSnapshot<T> current = snapshot;
-        if (!current.isVirtual()) {
-            return false;
-        }
-        snapshot = current.withPayload(payload);
+        snapshot = ViewSnapshot.of(world, area);
         return true;
     }
 
     public boolean publishEntities(Set<Integer> ids) {
-        ViewSnapshot<T> current = snapshot;
+        ViewSnapshot current = snapshot;
         if (!current.isVirtual()) {
             return false;
         }
@@ -39,12 +31,12 @@ public final class PlayerView<T> {
         return true;
     }
 
-    public Optional<ChunkKey> exit() {
-        ViewSnapshot<T> previous = snapshot;
+    public Optional<ViewSnapshot> exit() {
+        ViewSnapshot previous = snapshot;
         if (!previous.isVirtual()) {
             return Optional.empty();
         }
         snapshot = ViewSnapshot.real();
-        return Optional.of(previous.virtualChunk());
+        return Optional.of(previous);
     }
 }

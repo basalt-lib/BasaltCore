@@ -1,19 +1,21 @@
 package tlm.dev.basalt.nms.view;
 
+import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import org.bukkit.Server;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
-import tlm.dev.basalt.core.debug.DebugPattern;
-import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
+import tlm.dev.basalt.core.visibility.ChunkSend;
 import tlm.dev.basalt.core.visibility.PlayerView;
 import tlm.dev.basalt.core.visibility.ViewDisplay;
-import tlm.dev.basalt.nms.port.VirtualCopy;
 
-import java.util.OptionalInt;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
-public final class MojangViewDisplay implements ViewDisplay<VirtualCopy> {
+public final class MojangViewDisplay implements ViewDisplay {
 
     private final Server server;
     private final ViewTools tools;
@@ -24,7 +26,7 @@ public final class MojangViewDisplay implements ViewDisplay<VirtualCopy> {
     }
 
     @Override
-    public void attach(UUID player, PlayerView<VirtualCopy> view) {
+    public void attach(UUID player, PlayerView view) {
         Player online = server.getPlayer(player);
         if (online != null) {
             tools.channels().attach(online, tools.filters().forView(player, view));
@@ -40,32 +42,29 @@ public final class MojangViewDisplay implements ViewDisplay<VirtualCopy> {
     }
 
     @Override
-    public boolean hasChunk(UUID player, ChunkKey chunk) {
+    public List<ChunkKey> chunksHeld(UUID player, ChunkRange area) {
         Player online = server.getPlayer(player);
-        return online != null && online.isChunkSent(chunk.packed());
-    }
-
-    @Override
-    public VirtualCopy buildVirtual(UUID player, ChunkKey chunk, DebugPattern pattern) {
-        return tools.packets().virtualChunk(online(player), chunk, pattern);
-    }
-
-    @Override
-    public OptionalInt blockAt(VirtualCopy copy, BlockPosition position) {
-        if (!copy.chunk().key().equals(position.chunk()) || !copy.chunk().holds(position.localX(), position.y(), position.localZ())) {
-            return OptionalInt.empty();
+        if (online == null) {
+            return List.of();
         }
-        return OptionalInt.of(copy.chunk().stateAt(position.localX(), position.y(), position.localZ()));
+        return area.chunks().stream().filter(chunk -> online.isChunkSent(chunk.packed())).toList();
     }
 
     @Override
-    public VirtualCopy withBlock(UUID player, VirtualCopy copy, BlockPosition position, int state) {
-        return tools.packets().withBlock(online(player), copy, position, state);
-    }
-
-    @Override
-    public void sendVirtual(UUID player, VirtualCopy payload) {
-        tools.channels().writeDirect(online(player), payload.packet());
+    public ChunkSend sendVirtual(UUID player, UUID world, ChunkKey chunk) {
+        Player online = server.getPlayer(player);
+        if (online == null || !online.isChunkSent(chunk.packed())) {
+            return ChunkSend.GONE;
+        }
+        Optional<CompletableFuture<ClientboundLevelChunkWithLightPacket>> packet = tools.cache().packet(world, chunk);
+        if (packet.isEmpty() || packet.get().isCompletedExceptionally()) {
+            return ChunkSend.GONE;
+        }
+        if (!packet.get().isDone()) {
+            return ChunkSend.PENDING;
+        }
+        tools.channels().writeDirect(online, packet.get().join());
+        return ChunkSend.SENT;
     }
 
     @Override
@@ -80,6 +79,11 @@ public final class MojangViewDisplay implements ViewDisplay<VirtualCopy> {
         if (online != null) {
             ((CraftPlayer) online).getHandle().connection.resetFlyingTicks();
         }
+    }
+
+    @Override
+    public void release(UUID world) {
+        tools.cache().release(world);
     }
 
     private Player online(UUID player) {

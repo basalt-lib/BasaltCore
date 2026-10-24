@@ -1,7 +1,7 @@
 package tlm.dev.basalt.plugin.entity;
 
 import tlm.dev.basalt.core.entity.EntityViews;
-import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 import tlm.dev.basalt.core.visibility.ChunkViews;
 
 import java.util.Optional;
@@ -18,8 +18,8 @@ public final class ChunkEntityViews implements EntityViews {
     }
 
     @Override
-    public Optional<ChunkKey> virtualChunk(UUID player) {
-        return views.get().virtualChunk(player);
+    public Optional<ChunkRange> area(UUID player) {
+        return views.get().area(player);
     }
 
     @Override

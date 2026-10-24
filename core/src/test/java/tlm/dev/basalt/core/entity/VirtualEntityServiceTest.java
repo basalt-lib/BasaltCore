@@ -3,6 +3,7 @@ package tlm.dev.basalt.core.entity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 import tlm.dev.basalt.core.position.Point;
 
 import java.util.List;
@@ -32,7 +33,7 @@ class VirtualEntityServiceTest {
 
     @BeforeEach
     void enterTheArena() {
-        views.chunks.put(PLAYER, ARENA);
+        views.chunks.put(PLAYER, ChunkRange.of(ARENA));
     }
 
     @Test

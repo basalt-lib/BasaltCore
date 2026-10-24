@@ -6,15 +6,15 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-public final class PlayerViews<T> {
+public final class PlayerViews {
 
-    private final Map<UUID, PlayerView<T>> views = new HashMap<>();
+    private final Map<UUID, PlayerView> views = new HashMap<>();
 
-    public PlayerView<T> open(UUID player) {
-        return views.computeIfAbsent(player, id -> new PlayerView<>());
+    public PlayerView open(UUID player) {
+        return views.computeIfAbsent(player, id -> new PlayerView());
     }
 
-    public Optional<PlayerView<T>> find(UUID player) {
+    public Optional<PlayerView> find(UUID player) {
         return Optional.ofNullable(views.get(player));
     }
 

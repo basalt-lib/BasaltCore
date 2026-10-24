@@ -8,7 +8,7 @@ public final class ViewFilter {
     private ViewFilter() {
     }
 
-    public static Verdict decide(PacketFacts facts, ViewSnapshot<?> snapshot) {
+    public static Verdict decide(PacketFacts facts, ViewSnapshot snapshot) {
         if (!snapshot.hides(facts.chunk())) {
             return Verdict.PASS;
         }
@@ -20,7 +20,7 @@ public final class ViewFilter {
         };
     }
 
-    public static List<Verdict> decideEach(List<PacketFacts> contents, ViewSnapshot<?> snapshot) {
+    public static List<Verdict> decideEach(List<PacketFacts> contents, ViewSnapshot snapshot) {
         List<Verdict> verdicts = new ArrayList<>(contents.size());
         for (PacketFacts facts : contents) {
             verdicts.add(decide(facts, snapshot));

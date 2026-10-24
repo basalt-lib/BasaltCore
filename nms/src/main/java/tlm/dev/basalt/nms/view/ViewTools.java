@@ -4,5 +4,5 @@ import tlm.dev.basalt.nms.port.ChunkPackets;
 import tlm.dev.basalt.nms.port.PlayerChannels;
 import tlm.dev.basalt.nms.port.ViewFilters;
 
-public record ViewTools(PlayerChannels channels, ChunkPackets packets, ViewFilters filters) {
+public record ViewTools(PlayerChannels channels, ChunkPackets packets, ViewFilters filters, ChunkPacketCache cache) {
 }

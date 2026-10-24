@@ -16,15 +16,16 @@ public final class EntityExits implements ViewChanges {
     }
 
     @Override
-    public void entered(UUID player, ChunkKey chunk) {
-    }
-
-    @Override
-    public void left(UUID player, ExitCause cause) {
+    public void left(UUID player, UUID world, ExitCause cause) {
         if (cause.clientKeepsChunks()) {
             entities.removeAll(player);
         } else {
             entities.forget(player);
         }
+    }
+
+    @Override
+    public void sent(UUID player, UUID world, ChunkKey chunk) {
+        entities.resend(player);
     }
 }

@@ -122,7 +122,7 @@ class DebugChunkPatternTest {
 
     private static VirtualChunk paint(DebugPattern pattern, ChunkShape shape) {
         VirtualChunkBuilder builder = new VirtualChunkBuilder(new ChunkKey(0, 0), shape, TestBlocks.AIR);
-        DebugChunkPattern.paint(pattern, builder, STATES::get);
+        TestBlocks.paint(pattern, builder, STATES::get);
         return builder.build(TestBlocks.FORMATS, new TestBlocks(), TestBlocks.PLAINS);
     }
 }

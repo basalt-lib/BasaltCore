@@ -5,7 +5,7 @@ public final class InboundFilter {
     private InboundFilter() {
     }
 
-    public static InboundVerdict decide(InboundFacts facts, ViewSnapshot<?> snapshot) {
+    public static InboundVerdict decide(InboundFacts facts, ViewSnapshot snapshot) {
         if (!snapshot.isVirtual()) {
             return InboundVerdict.PASS;
         }

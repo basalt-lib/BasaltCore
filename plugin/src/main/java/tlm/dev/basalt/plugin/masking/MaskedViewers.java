@@ -6,7 +6,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
-import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 import tlm.dev.basalt.core.position.Point;
 import tlm.dev.basalt.core.visibility.EntityMask;
 import tlm.dev.basalt.core.visibility.EntityMasking;
@@ -38,13 +38,13 @@ public final class MaskedViewers implements ViewChanges {
     }
 
     @Override
-    public void entered(UUID player, ChunkKey chunk) {
-        viewers.computeIfAbsent(player, id -> new Viewer()).chunk = chunk;
+    public void entered(UUID player, UUID world, ChunkRange area) {
+        viewers.computeIfAbsent(player, id -> new Viewer()).area = area;
         scan(player);
     }
 
     @Override
-    public void left(UUID player, ExitCause cause) {
+    public void left(UUID player, UUID world, ExitCause cause) {
         release(player, cause);
     }
 
@@ -63,7 +63,7 @@ public final class MaskedViewers implements ViewChanges {
     public boolean hidesOnTrack(Player player, Entity entity) {
         Viewer viewer = viewers.get(player.getUniqueId());
         if (viewer == null || rides(player, entity)
-                || !EntityMasking.hides(player.getUniqueId(), Optional.of(viewer.chunk), real(entity))) {
+                || !EntityMasking.hides(player.getUniqueId(), Optional.of(viewer.area), real(entity))) {
             return false;
         }
         player.hideEntity(plugin, entity);
@@ -90,12 +90,12 @@ public final class MaskedViewers implements ViewChanges {
         if (viewer == null || player == null) {
             return 0;
         }
-        Map<UUID, Entity> nearby = nearby(player.getWorld(), viewer.chunk);
+        Map<UUID, Entity> nearby = nearby(player.getWorld(), viewer.area);
         nearby.values().removeIf(entity -> rides(player, entity));
         viewer.hidden.removeIf(entity -> nearby.containsKey(entity) && player.canSee(nearby.get(entity)));
         List<RealEntity> entities = new ArrayList<>(nearby.size());
         nearby.values().forEach(entity -> entities.add(real(entity)));
-        EntityMask mask = masking.decide(id, Optional.of(viewer.chunk), entities, viewer.hidden);
+        EntityMask mask = masking.decide(id, Optional.of(viewer.area), entities, viewer.hidden);
         for (UUID entity : mask.hide()) {
             player.hideEntity(plugin, nearby.get(entity));
             viewer.hidden.add(entity);
@@ -130,14 +130,10 @@ public final class MaskedViewers implements ViewChanges {
         entitiesShown++;
     }
 
-    private static Map<UUID, Entity> nearby(World world, ChunkKey chunk) {
+    private static Map<UUID, Entity> nearby(World world, ChunkRange area) {
         Map<UUID, Entity> found = new HashMap<>();
-        if (!world.isChunkLoaded(chunk.x(), chunk.z())) {
-            return found;
-        }
-        double x = chunk.x() * 16.0;
-        double z = chunk.z() * 16.0;
-        BoundingBox box = new BoundingBox(x, world.getMinHeight(), z, x + 16, world.getMaxHeight(), z + 16);
+        BoundingBox box = new BoundingBox(area.minX() * 16.0, world.getMinHeight(), area.minZ() * 16.0,
+                (area.maxX() + 1) * 16.0, world.getMaxHeight(), (area.maxZ() + 1) * 16.0);
         for (Entity entity : world.getNearbyEntities(box)) {
             found.put(entity.getUniqueId(), entity);
         }
@@ -155,7 +151,7 @@ public final class MaskedViewers implements ViewChanges {
 
     private static final class Viewer {
 
-        private ChunkKey chunk;
+        private ChunkRange area;
         private final Set<UUID> hidden = new HashSet<>();
     }
 }

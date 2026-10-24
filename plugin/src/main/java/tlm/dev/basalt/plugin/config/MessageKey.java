@@ -7,6 +7,7 @@ public enum MessageKey {
     DEBUG_CHUNK_NOT_VIRTUAL("debug-chunk-not-virtual"),
     DEBUG_CHUNK_PLAYER_OFFLINE("debug-chunk-player-offline"),
     DEBUG_CHUNK_NOT_TRACKED("debug-chunk-not-tracked"),
+    DEBUG_CHUNK_REFUSED("debug-chunk-refused"),
     DEBUG_ENTITY_SPAWNED("debug-entity-spawned"),
     DEBUG_ENTITY_MOVED("debug-entity-moved"),
     DEBUG_ENTITY_REMOVED("debug-entity-removed"),

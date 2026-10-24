@@ -1,6 +1,7 @@
 package tlm.dev.basalt.core.visibility;
 
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.List;
 import java.util.UUID;
@@ -14,12 +15,17 @@ final class FakeChanges implements ViewChanges {
     }
 
     @Override
-    public void entered(UUID player, ChunkKey chunk) {
-        events.add("entered " + chunk.x() + " " + chunk.z());
+    public void entered(UUID player, UUID world, ChunkRange area) {
+        events.add("entered " + area.minX() + " " + area.minZ());
     }
 
     @Override
-    public void left(UUID player, ExitCause cause) {
+    public void left(UUID player, UUID world, ExitCause cause) {
         events.add("left " + cause);
+    }
+
+    @Override
+    public void sent(UUID player, UUID world, ChunkKey chunk) {
+        events.add("sent " + chunk.x() + " " + chunk.z());
     }
 }

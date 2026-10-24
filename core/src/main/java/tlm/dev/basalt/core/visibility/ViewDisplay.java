@@ -1,29 +1,24 @@
 package tlm.dev.basalt.core.visibility;
 
-import tlm.dev.basalt.core.debug.DebugPattern;
-import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
-import java.util.OptionalInt;
+import java.util.List;
 import java.util.UUID;
 
-public interface ViewDisplay<T> {
+public interface ViewDisplay {
 
-    void attach(UUID player, PlayerView<T> view);
+    void attach(UUID player, PlayerView view);
 
     void detach(UUID player);
 
-    boolean hasChunk(UUID player, ChunkKey chunk);
+    List<ChunkKey> chunksHeld(UUID player, ChunkRange area);
 
-    T buildVirtual(UUID player, ChunkKey chunk, DebugPattern pattern);
-
-    OptionalInt blockAt(T copy, BlockPosition position);
-
-    T withBlock(UUID player, T copy, BlockPosition position, int state);
-
-    void sendVirtual(UUID player, T payload);
+    ChunkSend sendVirtual(UUID player, UUID world, ChunkKey chunk);
 
     void resendReal(UUID player, ChunkKey chunk);
 
     void restartFlyingCheck(UUID player);
+
+    void release(UUID world);
 }

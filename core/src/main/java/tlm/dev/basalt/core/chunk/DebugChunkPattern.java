@@ -2,7 +2,7 @@ package tlm.dev.basalt.core.chunk;
 
 import tlm.dev.basalt.core.debug.DebugPattern;
 
-import java.util.function.ToIntFunction;
+import java.util.List;
 
 public final class DebugChunkPattern {
 
@@ -22,56 +22,40 @@ public final class DebugChunkPattern {
     private DebugChunkPattern() {
     }
 
-    public static void paint(DebugPattern pattern, VirtualChunkBuilder builder, ToIntFunction<String> stateOf) {
-        switch (pattern) {
-            case FLAT -> paintFlat(builder, stateOf);
-            case RAISED -> paintRaised(builder, stateOf);
-        }
+    public static List<PatternBox> boxes(DebugPattern pattern, int bottom) {
+        return switch (pattern) {
+            case FLAT -> flat(bottom);
+            case RAISED -> raised(bottom);
+        };
     }
 
-    private static void paintFlat(VirtualChunkBuilder builder, ToIntFunction<String> stateOf) {
-        int bottom = builder.shape().minY();
-        int bedrock = stateOf.applyAsInt(BEDROCK);
-        int basalt = stateOf.applyAsInt(BASALT);
-        int smoothBasalt = stateOf.applyAsInt(SMOOTH_BASALT);
-        int gold = stateOf.applyAsInt(GOLD_BLOCK);
-        for (int z = 0; z < 16; z++) {
-            for (int x = 0; x < 16; x++) {
-                builder.set(x, bottom, z, bedrock);
-                builder.set(x, bottom + 1, z, basalt);
-                builder.set(x, bottom + 2, z, basalt);
-                builder.set(x, bottom + 3, z, smoothBasalt);
-                if (isRim(x, z)) {
-                    builder.set(x, bottom + 4, z, gold);
-                }
-            }
-        }
-        int diamond = stateOf.applyAsInt(DIAMOND_BLOCK);
-        for (int level = 0; level < PILLAR_HEIGHT; level++) {
-            builder.set(PILLAR, bottom + 4 + level, PILLAR, diamond);
-        }
+    private static List<PatternBox> flat(int bottom) {
+        int rim = bottom + 4;
+        return List.of(
+                layer(bottom, bottom, BEDROCK),
+                layer(bottom + 1, bottom + 2, BASALT),
+                layer(bottom + 3, bottom + 3, SMOOTH_BASALT),
+                new PatternBox(new LocalBox(0, rim, 0, 15, rim, 0), GOLD_BLOCK),
+                new PatternBox(new LocalBox(0, rim, 15, 15, rim, 15), GOLD_BLOCK),
+                new PatternBox(new LocalBox(0, rim, 1, 0, rim, 14), GOLD_BLOCK),
+                new PatternBox(new LocalBox(15, rim, 1, 15, rim, 14), GOLD_BLOCK),
+                new PatternBox(new LocalBox(PILLAR, rim, PILLAR, PILLAR, rim + PILLAR_HEIGHT - 1, PILLAR), DIAMOND_BLOCK));
     }
 
-    private static void paintRaised(VirtualChunkBuilder builder, ToIntFunction<String> stateOf) {
-        int platform = builder.shape().minY() + PLATFORM_LEVEL;
-        int smoothBasalt = stateOf.applyAsInt(SMOOTH_BASALT);
-        int gold = stateOf.applyAsInt(GOLD_BLOCK);
-        for (int z = 0; z < 16; z++) {
-            for (int x = 0; x < 16; x++) {
-                builder.set(x, platform, z, smoothBasalt);
-                if (isRim(x, z) && !isOpening(x, z)) {
-                    builder.set(x, platform + 1, z, gold);
-                }
-            }
-        }
-        builder.set(PILLAR, platform + 1, PILLAR, stateOf.applyAsInt(DIAMOND_BLOCK));
+    private static List<PatternBox> raised(int bottom) {
+        int platform = bottom + PLATFORM_LEVEL;
+        int rim = platform + 1;
+        return List.of(
+                layer(platform, platform, SMOOTH_BASALT),
+                new PatternBox(new LocalBox(0, rim, 0, 15, rim, 0), GOLD_BLOCK),
+                new PatternBox(new LocalBox(0, rim, 15, 15, rim, 15), GOLD_BLOCK),
+                new PatternBox(new LocalBox(0, rim, 1, 0, rim, 14), GOLD_BLOCK),
+                new PatternBox(new LocalBox(OPENING_X, rim, 1, OPENING_X, rim, OPENING_FIRST_Z - 1), GOLD_BLOCK),
+                new PatternBox(new LocalBox(OPENING_X, rim, OPENING_LAST_Z + 1, OPENING_X, rim, 14), GOLD_BLOCK),
+                new PatternBox(new LocalBox(PILLAR, rim, PILLAR, PILLAR, rim, PILLAR), DIAMOND_BLOCK));
     }
 
-    private static boolean isRim(int x, int z) {
-        return x == 0 || x == 15 || z == 0 || z == 15;
-    }
-
-    private static boolean isOpening(int x, int z) {
-        return x == OPENING_X && z >= OPENING_FIRST_Z && z <= OPENING_LAST_Z;
+    private static PatternBox layer(int fromY, int toY, String block) {
+        return new PatternBox(new LocalBox(0, fromY, 0, 15, toY, 15), block);
     }
 }

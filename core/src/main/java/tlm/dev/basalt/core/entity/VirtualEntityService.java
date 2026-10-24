@@ -1,6 +1,7 @@
 package tlm.dev.basalt.core.entity;
 
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 import tlm.dev.basalt.core.position.Point;
 
 import java.util.HashMap;
@@ -140,11 +141,11 @@ public final class VirtualEntityService {
     }
 
     private Optional<EntityRefusal> placementRefusal(UUID player, Point at) {
-        Optional<ChunkKey> chunk = tools.views().virtualChunk(player);
-        if (chunk.isEmpty()) {
+        Optional<ChunkRange> area = tools.views().area(player);
+        if (area.isEmpty()) {
             return Optional.of(EntityRefusal.NOT_VIRTUAL);
         }
-        if (!ChunkKey.containing(at.x(), at.z()).equals(chunk)) {
+        if (ChunkKey.containing(at.x(), at.z()).filter(area.get()::contains).isEmpty()) {
             return Optional.of(EntityRefusal.OUTSIDE_VIRTUAL_CHUNK);
         }
         return Optional.empty();

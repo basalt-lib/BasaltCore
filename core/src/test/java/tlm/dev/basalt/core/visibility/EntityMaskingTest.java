@@ -2,6 +2,7 @@ package tlm.dev.basalt.core.visibility;
 
 import org.junit.jupiter.api.Test;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 import tlm.dev.basalt.core.position.Point;
 
 import java.util.List;
@@ -20,8 +21,8 @@ class EntityMaskingTest {
     private static final UUID STAND = UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID ITEM = UUID.fromString("00000000-0000-0000-0000-000000000002");
     private static final UUID COW = UUID.fromString("00000000-0000-0000-0000-000000000003");
-    private static final ChunkKey ARENA = new ChunkKey(64, 64);
-    private static final ChunkKey NEIGHBOUR = new ChunkKey(65, 64);
+    private static final ChunkRange ARENA = ChunkRange.of(new ChunkKey(64, 64));
+    private static final ChunkRange NEIGHBOUR = ChunkRange.of(new ChunkKey(65, 64));
     private static final Point IN_ARENA = new Point(1032.5, -58, 1032.5);
     private static final Point IN_NEIGHBOUR = new Point(1044.5, -58, 1032.5);
 

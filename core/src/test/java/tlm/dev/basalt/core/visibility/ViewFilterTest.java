@@ -4,8 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -13,7 +15,7 @@ class ViewFilterTest {
 
     private static final ChunkKey HIDDEN = new ChunkKey(0, 0);
     private static final ChunkKey NEIGHBOUR = new ChunkKey(1, 0);
-    private static final ViewSnapshot<String> VIRTUAL = ViewSnapshot.virtual(HIDDEN, "virtual chunk");
+    private static final ViewSnapshot VIRTUAL = ViewSnapshot.of(new UUID(0, 1), ChunkRange.of(HIDDEN));
 
     @Test
     void replacesTheRealChunkWithTheVirtualOne() {

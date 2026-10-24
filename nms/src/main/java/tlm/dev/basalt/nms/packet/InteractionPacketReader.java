@@ -22,7 +22,6 @@ import tlm.dev.basalt.core.visibility.InboundKind;
 import tlm.dev.basalt.core.visibility.InboundVerdict;
 import tlm.dev.basalt.core.visibility.PlayerView;
 import tlm.dev.basalt.nms.port.InboundGate;
-import tlm.dev.basalt.nms.port.VirtualCopy;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -31,10 +30,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class InteractionPacketReader implements InboundGate {
 
     private final UUID player;
-    private final PlayerView<VirtualCopy> view;
+    private final PlayerView view;
     private final InteractionInbox inbox;
 
-    public InteractionPacketReader(UUID player, PlayerView<VirtualCopy> view, InteractionInbox inbox) {
+    public InteractionPacketReader(UUID player, PlayerView view, InteractionInbox inbox) {
         this.player = player;
         this.view = view;
         this.inbox = inbox;

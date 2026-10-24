@@ -1,72 +1,40 @@
 package tlm.dev.basalt.nms.packet;
 
 import io.netty.buffer.Unpooled;
-import net.minecraft.core.Registry;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.biome.Biomes;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
-import tlm.dev.basalt.core.chunk.ChunkFormats;
 import tlm.dev.basalt.core.chunk.ChunkPacketWriter;
-import tlm.dev.basalt.core.chunk.ChunkShape;
-import tlm.dev.basalt.core.chunk.DebugChunkPattern;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
-import tlm.dev.basalt.core.chunk.VirtualChunkBuilder;
-import tlm.dev.basalt.core.debug.DebugPattern;
-import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.nms.port.ChunkPackets;
-import tlm.dev.basalt.nms.port.VirtualCopy;
 
 import java.util.Optional;
 
 public final class MojangChunkPackets implements ChunkPackets {
 
-    private static final MojangBlockStateTraits TRAITS = new MojangBlockStateTraits();
+    private final RegistryAccess registries;
+    private final ChunkPacketWriter writer;
 
-    @Override
-    public VirtualCopy virtualChunk(Player player, ChunkKey chunk, DebugPattern pattern) {
-        ServerLevel level = ((CraftPlayer) player).getHandle().level();
-        Registry<Biome> biomes = level.registryAccess().lookupOrThrow(Registries.BIOME);
-        VirtualChunkBuilder builder = new VirtualChunkBuilder(
-                chunk, new ChunkShape(level.getMinY(), level.getSectionsCount()), Block.getId(Blocks.AIR.defaultBlockState()));
-        DebugChunkPattern.paint(pattern, builder, MojangChunkPackets::defaultStateId);
-        VirtualChunk virtualChunk = builder.build(formats(level), TRAITS, biomes.getId(biomes.getValueOrThrow(Biomes.PLAINS)));
-        return new VirtualCopy(virtualChunk, encode(level, virtualChunk));
+    public MojangChunkPackets(RegistryAccess registries) {
+        this.registries = registries;
+        this.writer = new ChunkPacketWriter(MojangWorldChunks.formats(registries));
     }
 
     @Override
-    public VirtualCopy withBlock(Player player, VirtualCopy copy, BlockPosition position, int state) {
-        VirtualChunk changed = copy.chunk().withBlock(position.localX(), position.y(), position.localZ(), state, TRAITS);
-        if (changed == copy.chunk()) {
-            return copy;
-        }
-        return new VirtualCopy(changed, encode(((CraftPlayer) player).getHandle().level(), changed));
-    }
-
-    private static ClientboundLevelChunkWithLightPacket encode(ServerLevel level, VirtualChunk virtualChunk) {
-        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(
-                Unpooled.wrappedBuffer(new ChunkPacketWriter(formats(level)).write(virtualChunk)), level.registryAccess());
+    public ClientboundLevelChunkWithLightPacket encode(VirtualChunk chunk) {
+        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(writer.write(chunk)), registries);
         ClientboundLevelChunkWithLightPacket packet = ClientboundLevelChunkWithLightPacket.STREAM_CODEC.decode(buffer);
         if (buffer.isReadable()) {
-            throw new IllegalStateException(buffer.readableBytes() + " bytes left after decoding the virtual chunk " + virtualChunk.key());
+            throw new IllegalStateException(buffer.readableBytes() + " bytes left after decoding the virtual chunk " + chunk.key());
         }
         packet.setReady(true);
         return packet;
-    }
-
-    private static ChunkFormats formats(ServerLevel level) {
-        return ChunkFormats.of(Block.BLOCK_STATE_REGISTRY.size(), level.registryAccess().lookupOrThrow(Registries.BIOME).size());
     }
 
     @Override
@@ -79,11 +47,5 @@ public final class MojangChunkPackets implements ChunkPackets {
         }
         boolean antiXray = level.chunkPacketBlockController.shouldModify(handle, levelChunk);
         return Optional.of(new ClientboundLevelChunkWithLightPacket(levelChunk, level.getLightEngine(), null, null, antiXray));
-    }
-
-    private static int defaultStateId(String blockId) {
-        Block block = BuiltInRegistries.BLOCK.getOptional(Identifier.parse(blockId))
-                .orElseThrow(() -> new IllegalArgumentException("unknown block " + blockId));
-        return Block.getId(block.defaultBlockState());
     }
 }

@@ -6,5 +6,5 @@ import java.util.UUID;
 
 public interface ViewFilters {
 
-    ChannelFilters forView(UUID player, PlayerView<VirtualCopy> view);
+    ChannelFilters forView(UUID player, PlayerView view);
 }

@@ -31,11 +31,13 @@ final class WorldFacade implements VirtualWorld {
 
     @Override
     public UUID id() {
+        tools.checkThread();
         return id;
     }
 
     @Override
     public ChunkArea area() {
+        tools.checkThread();
         return area;
     }
 

@@ -15,7 +15,18 @@ public enum MessageKey {
     DEBUG_ENTITY_NOT_VIRTUAL("debug-entity-not-virtual"),
     DEBUG_ENTITY_OUTSIDE("debug-entity-outside"),
     DEBUG_ENTITY_TOO_MANY("debug-entity-too-many"),
-    DEBUG_ENTITY_NONE("debug-entity-none");
+    DEBUG_ENTITY_NONE("debug-entity-none"),
+    DEBUG_WORLD_CREATED("debug-world-created"),
+    DEBUG_WORLD_BAD_NAME("debug-world-bad-name"),
+    DEBUG_WORLD_EXISTS("debug-world-exists"),
+    DEBUG_WORLD_REFUSED("debug-world-refused"),
+    DEBUG_WORLD_UNKNOWN("debug-world-unknown"),
+    DEBUG_WORLD_ADDED("debug-world-added"),
+    DEBUG_WORLD_VIEWER_REFUSED("debug-world-viewer-refused"),
+    DEBUG_WORLD_REMOVED("debug-world-removed"),
+    DEBUG_WORLD_NOT_VIEWING("debug-world-not-viewing"),
+    DEBUG_WORLD_CLOSED("debug-world-closed"),
+    DEBUG_WORLD_INFO("debug-world-info");
 
     private final String path;
 

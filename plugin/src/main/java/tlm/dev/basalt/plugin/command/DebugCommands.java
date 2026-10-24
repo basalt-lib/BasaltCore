@@ -10,10 +10,12 @@ public final class DebugCommands {
 
     private final DebugChunkCommand chunk;
     private final DebugEntityCommand entity;
+    private final DebugWorldCommand world;
 
-    public DebugCommands(DebugChunkCommand chunk, DebugEntityCommand entity) {
+    public DebugCommands(DebugChunkCommand chunk, DebugEntityCommand entity, DebugWorldCommand world) {
         this.chunk = chunk;
         this.entity = entity;
+        this.world = world;
     }
 
     public LiteralCommandNode<CommandSourceStack> node() {
@@ -21,7 +23,8 @@ public final class DebugCommands {
                 .requires(source -> source.getSender().hasPermission(PERMISSION))
                 .then(Commands.literal("debug")
                         .then(chunk.branch())
-                        .then(entity.branch()))
+                        .then(entity.branch())
+                        .then(world.branch()))
                 .build();
     }
 }

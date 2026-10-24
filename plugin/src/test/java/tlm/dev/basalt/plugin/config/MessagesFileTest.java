@@ -35,8 +35,9 @@ class MessagesFileTest {
     }
 
     @Test
-    void namesThePlayerInEveryTemplate() throws IOException {
-        entries().forEach((key, template) -> assertTrue(template.contains("<player>"), key + " does not name the player"));
+    void namesThePlayerOrTheWorldInEveryTemplate() throws IOException {
+        entries().forEach((key, template) -> assertTrue(template.contains("<player>") || template.contains("<world>"),
+                key + " names neither the player nor the world"));
     }
 
     private Map<String, String> entries() throws IOException {

@@ -31,6 +31,7 @@ import tlm.dev.basalt.nms.platform.MojangGameVersionSource;
 import tlm.dev.basalt.nms.port.WorldSource;
 import tlm.dev.basalt.plugin.command.DebugChunkCommand;
 import tlm.dev.basalt.plugin.command.DebugCommands;
+import tlm.dev.basalt.plugin.command.DebugWorldCommand;
 import tlm.dev.basalt.plugin.command.DebugEntityCommand;
 import tlm.dev.basalt.plugin.config.ConfigFile;
 import tlm.dev.basalt.plugin.config.ConfigReader;
@@ -122,8 +123,8 @@ public final class BasaltPlugin extends JavaPlugin {
         plugins.registerEvents(flyingKicks, this);
         plugins.registerEvents(new InteractionSessions(queues, interactions), this);
         plugins.registerEvents(new EntityTrackListener(masks), this);
-        DebugCommands commands = new DebugCommands(new DebugChunkCommand(worlds, getServer(), messages, new MojangBlockStates()),
-                new DebugEntityCommand(entities, entitySettings, getServer(), messages));
+        DebugCommands commands = new DebugCommands(new DebugChunkCommand(basalt, basalt::createWorldOverRealBlocks, getServer(), messages),
+                new DebugEntityCommand(entities, entitySettings, getServer(), messages), new DebugWorldCommand(basalt, getServer(), messages));
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> event.registrar().register(commands.node()));
 
         GameVersion game = new MojangGameVersionSource().current();

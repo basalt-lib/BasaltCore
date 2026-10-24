@@ -10,30 +10,19 @@ import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Server;
-import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import tlm.dev.basalt.core.chunk.DebugChunkPattern;
-import tlm.dev.basalt.core.chunk.LocalBox;
-import tlm.dev.basalt.core.chunk.PatternBox;
+import tlm.dev.basalt.api.Basalt;
+import tlm.dev.basalt.api.ChunkArea;
+import tlm.dev.basalt.api.VirtualWorld;
 import tlm.dev.basalt.core.debug.DebugPattern;
-import tlm.dev.basalt.core.position.BlockBox;
-import tlm.dev.basalt.core.position.BlockPosition;
-import tlm.dev.basalt.core.position.ChunkKey;
-import tlm.dev.basalt.core.position.ChunkRange;
-import tlm.dev.basalt.core.world.Creation;
-import tlm.dev.basalt.core.world.HostArea;
-import tlm.dev.basalt.core.world.HostRule;
-import tlm.dev.basalt.core.world.ViewerResult;
-import tlm.dev.basalt.core.world.VirtualWorlds;
-import tlm.dev.basalt.nms.platform.MojangBlockStates;
 import tlm.dev.basalt.plugin.config.MessageKey;
 import tlm.dev.basalt.plugin.config.MessageSettings;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 public final class DebugChunkCommand {
 
@@ -41,17 +30,17 @@ public final class DebugChunkCommand {
     private static final String CHUNK_X = "cx";
     private static final String CHUNK_Z = "cz";
 
-    private final VirtualWorlds<?> worlds;
+    private final Basalt basalt;
+    private final Function<ChunkArea, VirtualWorld> overRealBlocks;
     private final Server server;
     private final MessageSettings messages;
-    private final MojangBlockStates blocks;
-    private final Map<UUID, UUID> debugWorlds = new HashMap<>();
+    private final Map<UUID, VirtualWorld> debugWorlds = new HashMap<>();
 
-    public DebugChunkCommand(VirtualWorlds<?> worlds, Server server, MessageSettings messages, MojangBlockStates blocks) {
-        this.worlds = worlds;
+    public DebugChunkCommand(Basalt basalt, Function<ChunkArea, VirtualWorld> overRealBlocks, Server server, MessageSettings messages) {
+        this.basalt = basalt;
+        this.overRealBlocks = overRealBlocks;
         this.server = server;
         this.messages = messages;
-        this.blocks = blocks;
     }
 
     public LiteralArgumentBuilder<CommandSourceStack> branch() {
@@ -77,44 +66,40 @@ public final class DebugChunkCommand {
         if (player == null) {
             return 0;
         }
-        ChunkKey chunk = new ChunkKey(IntegerArgumentType.getInteger(context, CHUNK_X), IntegerArgumentType.getInteger(context, CHUNK_Z));
-        MessageKey message = showIn(player, chunk, pattern);
+        int chunkX = IntegerArgumentType.getInteger(context, CHUNK_X);
+        int chunkZ = IntegerArgumentType.getInteger(context, CHUNK_Z);
+        MessageKey message = showIn(player, new ChunkArea(player.getWorld(), chunkX, chunkZ, chunkX, chunkZ), pattern);
         sender.sendMessage(messages.render(message,
                 Placeholder.unparsed(PLAYER, player.getName()),
-                Placeholder.unparsed("x", Integer.toString(chunk.x())),
-                Placeholder.unparsed("z", Integer.toString(chunk.z())),
+                Placeholder.unparsed("x", Integer.toString(chunkX)),
+                Placeholder.unparsed("z", Integer.toString(chunkZ)),
                 Placeholder.unparsed("pattern", pattern.label())));
         return message == MessageKey.DEBUG_CHUNK_SHOWN ? Command.SINGLE_SUCCESS : 0;
     }
 
-    private MessageKey showIn(Player player, ChunkKey chunk, DebugPattern pattern) {
-        UUID id = player.getUniqueId();
-        if (worlds.worldOf(id).isPresent()) {
+    private MessageKey showIn(Player player, ChunkArea area, DebugPattern pattern) {
+        if (basalt.worldOf(player) != null) {
             return MessageKey.DEBUG_CHUNK_ALREADY_VIRTUAL;
         }
-        Optional.ofNullable(debugWorlds.remove(id)).ifPresent(worlds::close);
-        World world = player.getWorld();
-        HostArea host = new HostArea(world.getUID(), ChunkRange.of(chunk), world.getMinHeight(), world.getMaxHeight() - world.getMinHeight());
-        if (!(worlds.create(host, HostRule.ANY_BLOCKS) instanceof Creation.Created created)) {
+        VirtualWorld previous = debugWorlds.remove(player.getUniqueId());
+        if (previous != null) {
+            previous.close();
+        }
+        VirtualWorld world;
+        try {
+            world = overRealBlocks.apply(area);
+        } catch (IllegalStateException tooMany) {
             return MessageKey.DEBUG_CHUNK_REFUSED;
         }
-        paint(created.world(), chunk, pattern, world.getMinHeight());
-        if (worlds.addViewer(created.world(), id) != ViewerResult.ADDED) {
-            worlds.close(created.world());
+        DebugPainter.paint(world, server, pattern);
+        try {
+            world.addViewer(player);
+        } catch (IllegalStateException noView) {
+            world.close();
             return MessageKey.DEBUG_CHUNK_NOT_TRACKED;
         }
-        debugWorlds.put(id, created.world());
+        debugWorlds.put(player.getUniqueId(), world);
         return MessageKey.DEBUG_CHUNK_SHOWN;
-    }
-
-    private void paint(UUID world, ChunkKey chunk, DebugPattern pattern, int bottom) {
-        for (PatternBox painted : DebugChunkPattern.boxes(pattern, bottom)) {
-            LocalBox local = painted.box();
-            BlockBox box = new BlockBox(
-                    new BlockPosition((chunk.x() << 4) + local.minX(), local.minY(), (chunk.z() << 4) + local.minZ()),
-                    new BlockPosition((chunk.x() << 4) + local.maxX(), local.maxY(), (chunk.z() << 4) + local.maxZ()));
-            worlds.fill(world, box, blocks.stateOf(server.createBlockData(painted.block())));
-        }
     }
 
     private int hide(CommandContext<CommandSourceStack> context) {
@@ -123,12 +108,14 @@ public final class DebugChunkCommand {
         if (player == null) {
             return 0;
         }
-        Optional<UUID> world = worlds.worldOf(player.getUniqueId());
-        world.ifPresent(worlds::close);
+        VirtualWorld world = basalt.worldOf(player);
+        if (world != null) {
+            world.close();
+        }
         debugWorlds.remove(player.getUniqueId());
-        MessageKey message = world.isPresent() ? MessageKey.DEBUG_CHUNK_RESTORED : MessageKey.DEBUG_CHUNK_NOT_VIRTUAL;
+        MessageKey message = world != null ? MessageKey.DEBUG_CHUNK_RESTORED : MessageKey.DEBUG_CHUNK_NOT_VIRTUAL;
         sender.sendMessage(messages.render(message, Placeholder.unparsed(PLAYER, player.getName())));
-        return world.isPresent() ? Command.SINGLE_SUCCESS : 0;
+        return world != null ? Command.SINGLE_SUCCESS : 0;
     }
 
     private Player onlinePlayer(CommandContext<CommandSourceStack> context) {
@@ -141,6 +128,6 @@ public final class DebugChunkCommand {
     }
 
     private static IntegerArgumentType coordinate() {
-        return IntegerArgumentType.integer(-ChunkKey.MAX_COORDINATE, ChunkKey.MAX_COORDINATE);
+        return IntegerArgumentType.integer(-ChunkArea.MAX_CHUNK_COORDINATE, ChunkArea.MAX_CHUNK_COORDINATE);
     }
 }

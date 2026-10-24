@@ -48,6 +48,8 @@ class SeamTest {
     private static final Pattern PUBLIC_TYPE = Pattern.compile(
             "\\bpublic\\s+(?:(?:static|final|abstract|sealed|non-sealed|strictfp)\\s+)*(?:class|interface|enum|record|@interface)\\s+(\\w+)");
     private static final Pattern ANNOTATIONS_ONLY = Pattern.compile("(?:\\s*@[\\w.]+(?:\\([^)]*\\))?)*\\s*");
+    private static final Pattern MEMBER_LINE = Pattern.compile("(?m)^    (?=\\S)(.*)$");
+    private static final Pattern ANNOTATION_LINE = Pattern.compile("(?:@[\\w.]+(?:\\([^)]*\\))?\\s*)+");
 
     private static List<SourceFile> files;
 
@@ -160,6 +162,31 @@ class SeamTest {
         }
 
         assertEquals(List.of(), found, "public api types without Javadoc");
+    }
+
+    @Test
+    void everyPublicApiMethodHasJavadoc() {
+        List<String> found = new ArrayList<>();
+        for (SourceFile file : files) {
+            if (!file.path().startsWith(API_SOURCES) || !file.isJava()) {
+                continue;
+            }
+            Scan scan = Scan.of(file.text());
+            Matcher member = MEMBER_LINE.matcher(scan.code());
+            while (member.find()) {
+                String line = member.group(1).strip();
+                int parenthesis = line.indexOf('(');
+                if (parenthesis < 0 || line.startsWith("private ") || ANNOTATION_LINE.matcher(line).matches()
+                        || line.substring(0, parenthesis).contains("=")) {
+                    continue;
+                }
+                if (!scan.documents(file.text(), member.start())) {
+                    found.add(file.path() + ":" + file.lineOf(member.start()) + " " + line);
+                }
+            }
+        }
+
+        assertEquals(List.of(), found, "public api methods and constructors without Javadoc");
     }
 
     private static boolean isScanned(Path relative) {

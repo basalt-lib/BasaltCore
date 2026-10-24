@@ -45,6 +45,7 @@ import tlm.dev.basalt.plugin.entity.ChunkEntityViews;
 import tlm.dev.basalt.plugin.entity.EntityExits;
 import tlm.dev.basalt.plugin.entity.EntityTicker;
 import tlm.dev.basalt.plugin.facade.BasaltFacade;
+import tlm.dev.basalt.plugin.facade.FacadeTools;
 import tlm.dev.basalt.plugin.facade.ServiceRegistration;
 import tlm.dev.basalt.plugin.interaction.InteractionQueues;
 import tlm.dev.basalt.plugin.interaction.InteractionSessions;
@@ -103,7 +104,7 @@ public final class BasaltPlugin extends JavaPlugin {
         viewsOnceCreated.set(views);
         InteractionService interactions = new InteractionService(new InteractionTools(MojangInteractions.world(getServer()),
                 new ViewBlocks(worlds), new ViewEntities(entities, MojangEntities.shapes()), replies), settings);
-        BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion());
+        BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion(), new FacadeTools(getServer(), worlds, new MojangBlockStates(), worldSettings));
         FlyingKickListener flyingKicks = new FlyingKickListener(views, getLogger());
         lifecycle = new LifecycleManager(List.of(
                 new ServiceRegistration(getServer().getServicesManager(), this, basalt),

@@ -27,6 +27,5 @@ public final class EntityTicker implements Lifecycle {
             task.cancel();
             task = null;
         }
-        plugin.getLogger().info("Virtual entities still held: " + entities.held());
     }
 }

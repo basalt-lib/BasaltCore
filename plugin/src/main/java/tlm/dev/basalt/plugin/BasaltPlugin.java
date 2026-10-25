@@ -129,7 +129,7 @@ public final class BasaltPlugin extends JavaPlugin {
         lifecycle = new LifecycleManager(List.of(
                 new ServiceRegistration(getServer().getServicesManager(), this, basalt),
                 encoders,
-                new WorldSessions(worlds, getLogger()),
+                new WorldSessions(worlds, entities::held, getLogger()),
                 separations,
                 new ViewSessions(views, getServer(), getLogger()),
                 flyingKicks,

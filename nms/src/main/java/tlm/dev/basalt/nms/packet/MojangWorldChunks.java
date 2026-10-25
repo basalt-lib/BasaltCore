@@ -12,11 +12,14 @@ import tlm.dev.basalt.core.chunk.ChunkShape;
 import tlm.dev.basalt.core.chunk.LocalBox;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.chunk.VirtualChunkBuilder;
+import tlm.dev.basalt.core.edit.SectionWrite;
 import tlm.dev.basalt.core.position.BlockBox;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.world.HostArea;
 import tlm.dev.basalt.core.world.WorldChunks;
+
+import java.util.List;
 
 public final class MojangWorldChunks implements WorldChunks<VirtualChunk> {
 
@@ -46,6 +49,11 @@ public final class MojangWorldChunks implements WorldChunks<VirtualChunk> {
         LocalBox local = new LocalBox(box.min().localX(), box.min().y(), box.min().localZ(),
                 box.max().localX(), box.max().y(), box.max().localZ());
         return chunk.filled(local, state, TRAITS);
+    }
+
+    @Override
+    public VirtualChunk written(VirtualChunk chunk, List<SectionWrite> sections) {
+        return chunk.written(sections, TRAITS);
     }
 
     @Override

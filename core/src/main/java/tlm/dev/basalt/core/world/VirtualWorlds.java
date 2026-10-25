@@ -1,5 +1,6 @@
 package tlm.dev.basalt.core.world;
 
+import tlm.dev.basalt.core.edit.ChunkWrite;
 import tlm.dev.basalt.core.position.BlockBox;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
@@ -91,6 +92,38 @@ public final class VirtualWorlds<C> {
 
     public EditResult fill(UUID world, BlockBox box, int state) {
         return edit(world, box, state, Optional.empty());
+    }
+
+    public EditResult write(UUID world, List<ChunkWrite> writes) {
+        WorldSnapshot<C> snapshot = worlds.get(world);
+        if (snapshot == null) {
+            return EditResult.CLOSED;
+        }
+        int sectionCount = snapshot.host().height() / 16;
+        for (ChunkWrite write : writes) {
+            if (!snapshot.host().chunks().contains(write.chunk())
+                    || write.sections().stream().anyMatch(section -> section.sectionIndex() >= sectionCount)) {
+                return EditResult.OUTSIDE;
+            }
+        }
+        Map<ChunkKey, C> chunks = new HashMap<>(snapshot.chunks());
+        List<ChunkKey> changed = new ArrayList<>();
+        for (ChunkWrite write : writes) {
+            C before = chunks.containsKey(write.chunk()) ? chunks.get(write.chunk()) : tools.chunks().empty(write.chunk(), snapshot.host());
+            C after = tools.chunks().written(before, write.sections());
+            if (after != before) {
+                chunks.put(write.chunk(), after);
+                if (!changed.contains(write.chunk())) {
+                    changed.add(write.chunk());
+                }
+            }
+        }
+        if (changed.isEmpty()) {
+            return EditResult.UNCHANGED;
+        }
+        worlds.put(world, snapshot.withChunks(chunks));
+        tools.viewers().chunksChanged(Set.copyOf(snapshot.viewers()), List.copyOf(changed));
+        return EditResult.CHANGED;
     }
 
     public ViewerResult addViewer(UUID world, UUID player) {

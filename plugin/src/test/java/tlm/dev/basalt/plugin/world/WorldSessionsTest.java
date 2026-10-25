@@ -1,6 +1,7 @@
 package tlm.dev.basalt.plugin.world;
 
 import org.junit.jupiter.api.Test;
+import tlm.dev.basalt.core.edit.SectionWrite;
 import tlm.dev.basalt.core.position.BlockBox;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
@@ -73,6 +74,11 @@ class WorldSessionsTest {
 
         @Override
         public String fill(String chunk, BlockBox box, int state) {
+            return chunk;
+        }
+
+        @Override
+        public String written(String chunk, List<SectionWrite> sections) {
             return chunk;
         }
 

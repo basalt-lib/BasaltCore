@@ -2,12 +2,15 @@ package tlm.dev.basalt.core.world;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tlm.dev.basalt.core.edit.ChunkWrite;
+import tlm.dev.basalt.core.edit.SectionWrite;
 import tlm.dev.basalt.core.position.BlockBox;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.position.ChunkRange;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -295,6 +298,41 @@ class VirtualWorldsTest {
     }
 
     @Test
+    void writesSectionsOfSeveralChunksInOnePassThenSendsTheChangedChunks() {
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+        worlds.addViewer(world, A);
+        viewers.events.clear();
+        int[] stone = keepAll();
+        stone[SectionWrite.blockIndex(1, 10, 2)] = STONE;
+        int[] gold = keepAll();
+        gold[SectionWrite.blockIndex(0, 0, 0)] = GOLD;
+        List<ChunkWrite> writes = List.of(new ChunkWrite(new ChunkKey(68, 64), List.of(new SectionWrite(0, stone))),
+                new ChunkWrite(new ChunkKey(69, 65), List.of(new SectionWrite(1, gold))));
+
+        assertEquals(EditResult.CHANGED, worlds.write(world, writes));
+
+        assertEquals(OptionalInt.of(STONE), worlds.blockAt(world, new BlockPosition(1089, -54, 1026)));
+        assertEquals(OptionalInt.of(GOLD), worlds.blockAt(world, new BlockPosition(1104, -48, 1040)));
+        assertEquals(OptionalInt.of(FakeChunk.AIR), worlds.blockAt(world, new BlockPosition(1088, -54, 1026)));
+        assertEquals(List.of("chunks [68 64, 69 65] to [A]"), viewers.events);
+        assertEquals(EditResult.UNCHANGED, worlds.write(world, writes));
+    }
+
+    @Test
+    void refusesAWriteOutsideTheAreaOrTheHeightWithoutChangingAnything() {
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+        int[] stone = keepAll();
+        stone[0] = STONE;
+        ChunkWrite inside = new ChunkWrite(new ChunkKey(68, 64), List.of(new SectionWrite(0, stone)));
+
+        assertEquals(EditResult.OUTSIDE, worlds.write(world, List.of(inside, new ChunkWrite(new ChunkKey(70, 64), List.of(new SectionWrite(0, stone))))));
+        assertEquals(EditResult.OUTSIDE, worlds.write(world, List.of(new ChunkWrite(new ChunkKey(68, 64), List.of(new SectionWrite(24, stone))))));
+        assertEquals(Map.of(), worlds.snapshot(world).orElseThrow().chunks());
+        worlds.close(world);
+        assertEquals(EditResult.CLOSED, worlds.write(world, List.of(inside)));
+    }
+
+    @Test
     void closesEveryWorldAtOnce() {
         created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
@@ -366,5 +404,11 @@ class VirtualWorldsTest {
         List<String> all = new ArrayList<>(exits);
         all.addAll(events.subList(2, events.size()));
         return all;
+    }
+
+    private static int[] keepAll() {
+        int[] states = new int[SectionWrite.BLOCKS];
+        Arrays.fill(states, SectionWrite.KEEP);
+        return states;
     }
 }

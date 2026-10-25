@@ -1,7 +1,11 @@
 package tlm.dev.basalt.core.chunk;
 
 import org.junit.jupiter.api.Test;
+import tlm.dev.basalt.core.edit.SectionWrite;
 import tlm.dev.basalt.core.position.ChunkKey;
+
+import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -61,6 +65,38 @@ class VirtualChunkTest {
     }
 
     @Test
+    void writesManyStatesInOnePassAndKeepsTheOthers() {
+        int[] states = keepAll();
+        states[SectionWrite.blockIndex(3, 10, 4)] = TestBlocks.AIR;
+        states[SectionWrite.blockIndex(0, 0, 0)] = TestBlocks.LEAVES;
+        states[SectionWrite.blockIndex(15, 15, 15)] = TestBlocks.STONE;
+
+        VirtualChunk written = platform.written(List.of(new SectionWrite(0, states)), TRAITS);
+
+        assertEquals(TestBlocks.AIR, written.stateAt(3, -54, 4));
+        assertEquals(TestBlocks.FLOWER, written.stateAt(3, -53, 4));
+        assertEquals(TestBlocks.LEAVES, written.stateAt(0, -64, 0));
+        assertEquals(TestBlocks.STONE, written.stateAt(15, -49, 15));
+        assertEquals(3, written.nonAirCount());
+        assertSame(platform.sections().get(1), written.sections().get(1));
+        assertEquals(16, written.heights().get(HeightmapType.MOTION_BLOCKING)[HeightmapCodec.column(15, 15)]);
+        assertEquals(1, written.heights().get(HeightmapType.MOTION_BLOCKING)[HeightmapCodec.column(0, 0)]);
+        assertEquals(0, written.heights().get(HeightmapType.MOTION_BLOCKING)[HeightmapCodec.column(3, 4)]);
+        assertEquals(TestBlocks.STONE, platform.stateAt(3, -54, 4));
+    }
+
+    @Test
+    void writingTheStatesItHoldsReturnsItself() {
+        int[] states = keepAll();
+        states[SectionWrite.blockIndex(3, 10, 4)] = TestBlocks.STONE;
+
+        assertSame(platform, platform.written(List.of(new SectionWrite(0, states)), TRAITS));
+        assertThrows(IndexOutOfBoundsException.class, () -> platform.written(List.of(new SectionWrite(24, keepAll())), TRAITS));
+        assertThrows(IllegalArgumentException.class, () -> new SectionWrite(0, new int[16]));
+        assertThrows(IllegalArgumentException.class, () -> new SectionWrite(-1, keepAll()));
+    }
+
+    @Test
     void returnsItselfWhenTheBlockDoesNotChange() {
         assertSame(platform, platform.withBlock(3, -54, 4, TestBlocks.STONE, TRAITS));
     }
@@ -110,5 +146,11 @@ class VirtualChunkTest {
         assertFalse(platform.holds(0, 320, -1));
         assertThrows(IndexOutOfBoundsException.class, () -> platform.withBlock(0, 320, 0, TestBlocks.STONE, TRAITS));
         assertThrows(IllegalArgumentException.class, () -> platform.withBlock(0, 0, 0, -1, TRAITS));
+    }
+
+    private static int[] keepAll() {
+        int[] states = new int[SectionWrite.BLOCKS];
+        Arrays.fill(states, SectionWrite.KEEP);
+        return states;
     }
 }

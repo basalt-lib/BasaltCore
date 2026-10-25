@@ -1,5 +1,6 @@
 package tlm.dev.basalt.core.chunk;
 
+import tlm.dev.basalt.core.edit.SectionWrite;
 import tlm.dev.basalt.core.position.ChunkKey;
 
 import java.util.ArrayList;
@@ -84,6 +85,58 @@ public final class VirtualChunk {
             }
         }
         return new VirtualChunk(key, shape, changed, changedHeights);
+    }
+
+    public VirtualChunk written(List<SectionWrite> writes, BlockStateTraits traits) {
+        List<ChunkSection> changed = new ArrayList<>(sections);
+        boolean any = false;
+        for (SectionWrite write : writes) {
+            if (write.sectionIndex() >= sections.size()) {
+                throw new IndexOutOfBoundsException("section " + write.sectionIndex() + " outside a chunk of " + sections.size());
+            }
+            ChunkSection section = changed.get(write.sectionIndex());
+            ChunkSection writtenSection = writeSection(section, write, traits);
+            if (writtenSection != section) {
+                changed.set(write.sectionIndex(), writtenSection);
+                any = true;
+            }
+        }
+        if (!any) {
+            return this;
+        }
+        Map<HeightmapType, int[]> changedHeights = copy(heights);
+        for (int z = 0; z < 16; z++) {
+            for (int x = 0; x < 16; x++) {
+                for (HeightmapType type : HeightmapType.values()) {
+                    changedHeights.get(type)[HeightmapCodec.column(x, z)] = columnHeight(changed, x, z, type, traits);
+                }
+            }
+        }
+        return new VirtualChunk(key, shape, changed, changedHeights);
+    }
+
+    private static ChunkSection writeSection(ChunkSection section, SectionWrite write, BlockStateTraits traits) {
+        int[] states = null;
+        int nonAir = section.nonAirCount();
+        for (int index = 0; index < SectionWrite.BLOCKS; index++) {
+            int state = write.stateAt(index);
+            if (state == SectionWrite.KEEP) {
+                continue;
+            }
+            int previous = states == null ? section.states().get(index) : states[index];
+            if (previous == state) {
+                continue;
+            }
+            if (states == null) {
+                states = section.states().toArray();
+            }
+            states[index] = state;
+            nonAir += (traits.isAir(previous) ? 0 : -1) + (traits.isAir(state) ? 0 : 1);
+        }
+        if (states == null) {
+            return section;
+        }
+        return new ChunkSection(PalettedValues.of(states, section.states().format()), section.biomes(), nonAir);
     }
 
     private ChunkSection fillSection(int sectionIndex, LocalBox box, int state, BlockStateTraits traits) {

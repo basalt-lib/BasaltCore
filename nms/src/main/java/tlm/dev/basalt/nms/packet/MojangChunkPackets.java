@@ -6,6 +6,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.chunk.DataLayer;
 import net.minecraft.world.level.chunk.LevelChunk;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
@@ -15,6 +16,7 @@ import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.visibility.PacketMemory;
 import tlm.dev.basalt.nms.port.ChunkPackets;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -22,6 +24,8 @@ import java.util.Optional;
 import java.util.Set;
 
 public final class MojangChunkPackets implements ChunkPackets {
+
+    private static final byte[] FULL_SKY = fullSky();
 
     private final RegistryAccess registries;
     private final ChunkPacketWriter writer;
@@ -38,6 +42,7 @@ public final class MojangChunkPackets implements ChunkPackets {
         if (buffer.isReadable()) {
             throw new IllegalStateException(buffer.readableBytes() + " bytes left after decoding the virtual chunk " + chunk.key());
         }
+        packet.getLightData().getSkyUpdates().replaceAll(layer -> Arrays.equals(layer, FULL_SKY) ? FULL_SKY : layer);
         packet.setReady(true);
         return packet;
     }
@@ -68,6 +73,12 @@ public final class MojangChunkPackets implements ChunkPackets {
             }
         }
         return new PacketMemory(packets.size(), bytes);
+    }
+
+    private static byte[] fullSky() {
+        byte[] layer = new byte[DataLayer.SIZE];
+        Arrays.fill(layer, (byte) 0xFF);
+        return layer;
     }
 
     @Override

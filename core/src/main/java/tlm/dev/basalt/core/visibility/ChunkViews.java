@@ -30,4 +30,6 @@ public interface ChunkViews {
     int sendRequested(int budget);
 
     void release(UUID world);
+
+    PacketMemory memory(UUID world);
 }

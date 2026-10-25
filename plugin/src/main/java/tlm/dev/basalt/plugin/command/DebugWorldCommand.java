@@ -21,6 +21,7 @@ import tlm.dev.basalt.api.HostAreaException;
 import tlm.dev.basalt.api.PlayerVisibility;
 import tlm.dev.basalt.api.VirtualWorld;
 import tlm.dev.basalt.core.debug.DebugPattern;
+import tlm.dev.basalt.core.visibility.PacketMemory;
 import tlm.dev.basalt.plugin.config.MessageKey;
 import tlm.dev.basalt.plugin.config.MessageSettings;
 
@@ -29,6 +30,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 public final class DebugWorldCommand {
@@ -43,13 +46,15 @@ public final class DebugWorldCommand {
     private final Plugin plugin;
     private final Server server;
     private final MessageSettings messages;
+    private final Function<UUID, PacketMemory> memory;
     private final Map<String, VirtualWorld> named = new LinkedHashMap<>();
 
-    public DebugWorldCommand(Basalt basalt, Plugin plugin, MessageSettings messages) {
+    public DebugWorldCommand(Basalt basalt, Plugin plugin, MessageSettings messages, Function<UUID, PacketMemory> memory) {
         this.basalt = basalt;
         this.plugin = plugin;
         this.server = plugin.getServer();
         this.messages = messages;
+        this.memory = memory;
     }
 
     public LiteralArgumentBuilder<CommandSourceStack> branch() {
@@ -182,7 +187,10 @@ public final class DebugWorldCommand {
             return reply(sender, MessageKey.DEBUG_WORLD_UNKNOWN, Placeholder.unparsed(WORLD, name));
         }
         List<String> viewers = world.get().viewers().stream().map(Player::getName).sorted().toList();
+        PacketMemory packets = memory.apply(world.get().id());
         sender.sendMessage(messages.render(MessageKey.DEBUG_WORLD_INFO, Placeholder.unparsed(WORLD, name),
+                Placeholder.unparsed("packets", Integer.toString(packets.packets())),
+                Placeholder.unparsed("bytes", Long.toString(packets.bytes())),
                 Placeholder.unparsed("id", world.get().id().toString()), area(world.get().area()),
                 Placeholder.unparsed("chunks", Long.toString(world.get().area().chunkCount())),
                 Placeholder.unparsed("count", Integer.toString(viewers.size())),

@@ -127,6 +127,11 @@ public final class ChunkViewService implements ChunkViews {
         display.release(world);
     }
 
+    @Override
+    public PacketMemory memory(UUID world) {
+        return display.memory(world);
+    }
+
     private boolean sendNext(UUID player) {
         Optional<ViewSnapshot> snapshot = snapshot(player);
         Set<ChunkKey> chunks = pending.get(player);

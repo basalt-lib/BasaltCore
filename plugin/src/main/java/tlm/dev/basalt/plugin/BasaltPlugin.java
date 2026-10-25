@@ -149,7 +149,7 @@ public final class BasaltPlugin extends JavaPlugin {
         DebugEventWatch eventWatch = new DebugEventWatch(this);
         eventWatch.listen();
         DebugCommands commands = new DebugCommands(new DebugChunkCommand(basalt, area -> basalt.createWorldOverRealBlocks(this, area), getServer(), messages),
-                new DebugEntityCommand(basalt, entities, getServer(), messages), new DebugWorldCommand(basalt, this, messages),
+                new DebugEntityCommand(basalt, entities, getServer(), messages), new DebugWorldCommand(basalt, this, messages, views::memory),
                 new DebugEventsCommand(eventWatch, getServer(), messages));
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> event.registrar().register(commands.node()));
 

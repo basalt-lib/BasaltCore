@@ -346,6 +346,7 @@ class ChunkViewServiceTest {
         service.release(WORLD);
 
         assertEquals(List.of("release"), display.events);
+        assertEquals(new PacketMemory(1, 2048), service.memory(WORLD));
     }
 
     @Test

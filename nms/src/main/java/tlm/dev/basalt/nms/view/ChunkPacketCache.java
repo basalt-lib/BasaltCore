@@ -3,12 +3,14 @@ package tlm.dev.basalt.nms.view;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.visibility.PacketMemory;
 import tlm.dev.basalt.core.world.HostArea;
 import tlm.dev.basalt.core.world.WorldSnapshot;
 import tlm.dev.basalt.nms.port.ChunkPackets;
 import tlm.dev.basalt.nms.port.WorldSource;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,6 +54,15 @@ public final class ChunkPacketCache {
 
     public void release(UUID world) {
         encodings.remove(world);
+    }
+
+    public PacketMemory memory(UUID world) {
+        List<ClientboundLevelChunkWithLightPacket> ready = encodings.getOrDefault(world, Map.of()).values().stream()
+                .map(Encoding::packet)
+                .filter(packet -> packet.isDone() && !packet.isCompletedExceptionally())
+                .map(CompletableFuture::join)
+                .toList();
+        return packets.memory(ready);
     }
 
     public long encoded() {

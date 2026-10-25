@@ -62,6 +62,11 @@ final class FakeDisplay implements ViewDisplay {
         events.add("release");
     }
 
+    @Override
+    public PacketMemory memory(UUID world) {
+        return new PacketMemory(1, 2048);
+    }
+
     private String state(UUID player) {
         PlayerView view = attached.get(player);
         return view == null ? "detached" : view.snapshot().isVirtual() ? "virtual" : "real";

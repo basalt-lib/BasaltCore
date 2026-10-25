@@ -4,7 +4,9 @@ import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import org.bukkit.entity.Player;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.visibility.PacketMemory;
 
+import java.util.Collection;
 import java.util.Optional;
 
 public interface ChunkPackets {
@@ -12,4 +14,6 @@ public interface ChunkPackets {
     ClientboundLevelChunkWithLightPacket encode(VirtualChunk chunk);
 
     Optional<ClientboundLevelChunkWithLightPacket> realChunk(Player player, ChunkKey chunk);
+
+    PacketMemory memory(Collection<ClientboundLevelChunkWithLightPacket> packets);
 }

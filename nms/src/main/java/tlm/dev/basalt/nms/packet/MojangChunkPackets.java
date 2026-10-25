@@ -12,9 +12,14 @@ import org.bukkit.entity.Player;
 import tlm.dev.basalt.core.chunk.ChunkPacketWriter;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.position.ChunkKey;
+import tlm.dev.basalt.core.visibility.PacketMemory;
 import tlm.dev.basalt.nms.port.ChunkPackets;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Optional;
+import java.util.Set;
 
 public final class MojangChunkPackets implements ChunkPackets {
 
@@ -35,6 +40,34 @@ public final class MojangChunkPackets implements ChunkPackets {
         }
         packet.setReady(true);
         return packet;
+    }
+
+    @Override
+    public PacketMemory memory(Collection<ClientboundLevelChunkWithLightPacket> packets) {
+        Set<Object> counted = Collections.newSetFromMap(new IdentityHashMap<>());
+        long bytes = 0;
+        for (ClientboundLevelChunkWithLightPacket packet : packets) {
+            byte[] sections = packet.getChunkData().getReadBuffer().array();
+            if (counted.add(sections)) {
+                bytes += sections.length;
+            }
+            for (long[] heightmap : packet.getChunkData().getHeightmaps().values()) {
+                if (counted.add(heightmap)) {
+                    bytes += (long) heightmap.length * Long.BYTES;
+                }
+            }
+            for (byte[] layer : packet.getLightData().getSkyUpdates()) {
+                if (counted.add(layer)) {
+                    bytes += layer.length;
+                }
+            }
+            for (byte[] layer : packet.getLightData().getBlockUpdates()) {
+                if (counted.add(layer)) {
+                    bytes += layer.length;
+                }
+            }
+        }
+        return new PacketMemory(packets.size(), bytes);
     }
 
     @Override

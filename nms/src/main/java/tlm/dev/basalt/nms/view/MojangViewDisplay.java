@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.position.ChunkRange;
 import tlm.dev.basalt.core.visibility.ChunkSend;
+import tlm.dev.basalt.core.visibility.PacketMemory;
 import tlm.dev.basalt.core.visibility.PlayerView;
 import tlm.dev.basalt.core.visibility.ViewDisplay;
 
@@ -84,6 +85,11 @@ public final class MojangViewDisplay implements ViewDisplay {
     @Override
     public void release(UUID world) {
         tools.cache().release(world);
+    }
+
+    @Override
+    public PacketMemory memory(UUID world) {
+        return tools.cache().memory(world);
     }
 
     private Player online(UUID player) {

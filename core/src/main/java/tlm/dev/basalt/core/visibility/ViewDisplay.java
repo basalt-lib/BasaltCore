@@ -21,4 +21,6 @@ public interface ViewDisplay {
     void restartFlyingCheck(UUID player);
 
     void release(UUID world);
+
+    PacketMemory memory(UUID world);
 }

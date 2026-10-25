@@ -16,6 +16,8 @@ public enum MessageKey {
     DEBUG_ENTITY_OUTSIDE("debug-entity-outside"),
     DEBUG_ENTITY_TOO_MANY("debug-entity-too-many"),
     DEBUG_ENTITY_NONE("debug-entity-none"),
+    DEBUG_ENTITY_TYPE_REFUSED("debug-entity-type-refused"),
+    DEBUG_ENTITY_HEALTH("debug-entity-health"),
     DEBUG_WORLD_CREATED("debug-world-created"),
     DEBUG_WORLD_BAD_NAME("debug-world-bad-name"),
     DEBUG_WORLD_EXISTS("debug-world-exists"),

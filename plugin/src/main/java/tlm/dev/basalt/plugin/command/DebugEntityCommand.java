@@ -12,6 +12,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.Server;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -34,8 +36,11 @@ public final class DebugEntityCommand {
     private static final String Y = "y";
     private static final String Z = "z";
     private static final String NONE = "none";
+    private static final String TYPE = "type";
+    private static final String HEALTH_ARGUMENT = "health";
     private static final String NAME = "Basalt";
     private static final double HEALTH = 5;
+    private static final double MAX_HEALTH = 1024;
 
     private final Basalt basalt;
     private final VirtualEntityService entities;
@@ -52,16 +57,28 @@ public final class DebugEntityCommand {
     public LiteralArgumentBuilder<CommandSourceStack> branch() {
         return Commands.literal("entity")
                 .then(Commands.argument(PLAYER, StringArgumentType.word())
-                        .then(Commands.literal("on").then(position(this::spawn)))
-                        .then(Commands.literal("move").then(position(this::move)))
+                        .then(Commands.literal("on").then(position(at(this::spawn)
+                                .then(Commands.argument(TYPE, StringArgumentType.word()).executes(this::spawnType)))))
+                        .then(Commands.literal("move").then(position(at(this::move))))
+                        .then(Commands.literal("health").then(Commands.argument(HEALTH_ARGUMENT,
+                                DoubleArgumentType.doubleArg(0, MAX_HEALTH)).executes(this::health)))
                         .then(Commands.literal("off").executes(this::removeAll))
                         .then(Commands.literal("status").executes(this::status)));
     }
 
-    private RequiredArgumentBuilder<CommandSourceStack, Double> position(Placement placement) {
-        return Commands.argument(X, horizontal())
-                .then(Commands.argument(Y, vertical())
-                        .then(Commands.argument(Z, horizontal()).executes(context -> place(context, placement))));
+    private RequiredArgumentBuilder<CommandSourceStack, Double> position(RequiredArgumentBuilder<CommandSourceStack, Double> z) {
+        return Commands.argument(X, horizontal()).then(Commands.argument(Y, vertical()).then(z));
+    }
+
+    private RequiredArgumentBuilder<CommandSourceStack, Double> at(Placement placement) {
+        return Commands.argument(Z, horizontal()).executes(context -> place(context, placement));
+    }
+
+    private int spawnType(CommandContext<CommandSourceStack> context) {
+        String name = StringArgumentType.getString(context, TYPE).toLowerCase(Locale.ROOT);
+        NamespacedKey key = NamespacedKey.fromString(name);
+        EntityType type = key == null ? null : Registry.ENTITY_TYPE.get(key);
+        return place(context, (player, world, at) -> spawnPlain(world, at, type));
     }
 
     private int place(CommandContext<CommandSourceStack> context, Placement placement) {
@@ -97,6 +114,25 @@ public final class DebugEntityCommand {
         }
     }
 
+    private Placed spawnPlain(VirtualWorld world, Location at, EntityType type) {
+        if (world == null) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_NOT_VIRTUAL);
+        }
+        if (!inside(world, at)) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_OUTSIDE);
+        }
+        if (type == null) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_TYPE_REFUSED);
+        }
+        try {
+            return new Placed(MessageKey.DEBUG_ENTITY_SPAWNED, world.spawnEntity(type, at).id());
+        } catch (IllegalArgumentException refused) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_TYPE_REFUSED);
+        } catch (IllegalStateException full) {
+            return Placed.refused(MessageKey.DEBUG_ENTITY_TOO_MANY);
+        }
+    }
+
     private Placed move(Player player, VirtualWorld world, Location to) {
         List<VirtualEntity> living = world == null ? List.of() : world.entities().stream().filter(entity -> entity.health() > 0).toList();
         if (living.isEmpty()) {
@@ -109,6 +145,35 @@ public final class DebugEntityCommand {
         } catch (IllegalArgumentException outside) {
             return Placed.refused(MessageKey.DEBUG_ENTITY_OUTSIDE);
         }
+    }
+
+    private int health(CommandContext<CommandSourceStack> context) {
+        Player player = onlinePlayer(context);
+        if (player == null) {
+            return 0;
+        }
+        VirtualWorld world = basalt.worldOf(player);
+        List<VirtualEntity> living = world == null ? List.of() : world.entities().stream().filter(entity -> entity.health() > 0).toList();
+        double health = DoubleArgumentType.getDouble(context, HEALTH_ARGUMENT);
+        if (living.isEmpty()) {
+            return reply(context, MessageKey.DEBUG_ENTITY_NONE, player, 0, health);
+        }
+        VirtualEntity newest = living.getLast();
+        newest.setHealth(Math.min(health, newest.maxHealth()));
+        return reply(context, MessageKey.DEBUG_ENTITY_HEALTH, player, newest.id(), newest.health());
+    }
+
+    private int reply(CommandContext<CommandSourceStack> context, MessageKey message, Player player, int id, double health) {
+        context.getSource().getSender().sendMessage(messages.render(message, Placeholder.unparsed(PLAYER, player.getName()),
+                Placeholder.unparsed("id", Integer.toString(id)), Placeholder.unparsed("health", health(health))));
+        return id > 0 ? Command.SINGLE_SUCCESS : 0;
+    }
+
+    private static boolean inside(VirtualWorld world, Location at) {
+        int chunkX = Math.floorDiv(at.getBlockX(), 16);
+        int chunkZ = Math.floorDiv(at.getBlockZ(), 16);
+        return chunkX >= world.area().minChunkX() && chunkX <= world.area().maxChunkX()
+                && chunkZ >= world.area().minChunkZ() && chunkZ <= world.area().maxChunkZ();
     }
 
     private int removeAll(CommandContext<CommandSourceStack> context) {

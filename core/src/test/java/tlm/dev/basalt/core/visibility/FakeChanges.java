@@ -28,4 +28,9 @@ final class FakeChanges implements ViewChanges {
     public void sent(UUID player, UUID world, ChunkKey chunk) {
         events.add("sent " + chunk.x() + " " + chunk.z());
     }
+
+    @Override
+    public void exited(UUID player, UUID world, ExitCause cause) {
+        events.add("exited " + cause);
+    }
 }

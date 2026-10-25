@@ -35,7 +35,7 @@ class SeamTest {
             "nms", Set.of("channel", "entity", "interaction", "packet", "view"),
             "plugin", Set.of("command", "entity", "facade", "interaction", "listener", "masking", "world"));
     private static final Map<String, Set<String>> PLUMBING = Map.of(
-            "api", Set.of(""),
+            "api", Set.of("", "event"),
             "core", Set.of("debug", "platform", "position"),
             "nms", Set.of("", "platform", "port"),
             "plugin", Set.of("", "config", "lifecycle"));

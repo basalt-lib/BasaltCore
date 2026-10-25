@@ -16,6 +16,9 @@ public interface ViewChanges {
     default void sent(UUID player, UUID world, ChunkKey chunk) {
     }
 
+    default void exited(UUID player, UUID world, ExitCause cause) {
+    }
+
     static ViewChanges both(ViewChanges first, ViewChanges second) {
         return new ViewChanges() {
             @Override
@@ -34,6 +37,12 @@ public interface ViewChanges {
             public void sent(UUID player, UUID world, ChunkKey chunk) {
                 first.sent(player, world, chunk);
                 second.sent(player, world, chunk);
+            }
+
+            @Override
+            public void exited(UUID player, UUID world, ExitCause cause) {
+                first.exited(player, world, cause);
+                second.exited(player, world, cause);
             }
         };
     }

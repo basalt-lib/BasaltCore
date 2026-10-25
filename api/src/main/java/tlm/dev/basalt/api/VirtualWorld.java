@@ -17,7 +17,9 @@ import java.util.UUID;
 /**
  * A virtual world: blocks made of packets on a {@link ChunkArea} of a real world, shared by its viewers.
  * A viewer sees the blocks of this world instead of the real blocks of the area, every other player sees the real world.
- * Changes made through this interface or by a viewer are seen by every viewer.
+ * Changes made through this interface or by a viewer are seen by every viewer. What a viewer does to the blocks and the
+ * entities of the world calls the cancellable events of {@code tlm.dev.basalt.api.event}, never the usual Bukkit
+ * events, and nothing costs or drops by default.
  * <p>
  * Every method runs on the main server thread only and throws {@link IllegalStateException} on another thread.
  * Get a world from {@link Basalt#createWorld(Plugin, ChunkArea)}, never implement this interface.

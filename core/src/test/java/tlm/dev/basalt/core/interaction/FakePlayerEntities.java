@@ -12,10 +12,16 @@ final class FakePlayerEntities implements PlayerEntities {
     final Map<Integer, EntityTarget> targets = new HashMap<>();
     final List<String> calls = new ArrayList<>();
     EntityHit nextHit = EntityHit.HURT;
+    boolean ready = true;
 
     @Override
     public Optional<EntityTarget> target(UUID player, int entity) {
         return Optional.ofNullable(targets.get(entity));
+    }
+
+    @Override
+    public boolean hitReady(UUID player, int entity) {
+        return ready;
     }
 
     @Override

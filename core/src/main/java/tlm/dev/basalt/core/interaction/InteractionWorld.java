@@ -20,4 +20,6 @@ public interface InteractionWorld {
     boolean replaceable(int state);
 
     boolean unobstructed(UUID player, BlockPosition position, int state);
+
+    void consume(UUID player, Hand hand);
 }

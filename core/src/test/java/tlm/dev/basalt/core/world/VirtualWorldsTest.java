@@ -278,6 +278,23 @@ class VirtualWorldsTest {
     }
 
     @Test
+    void refusesANewViewerAndASecondCloseWhileTheWorldCloses() {
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+        worlds.addViewer(world, A);
+        List<String> during = new ArrayList<>();
+        viewers.exitPath = player -> {
+            worlds.worldOf(player).ifPresent(viewed -> worlds.viewerLeft(viewed, player));
+            during.add(worlds.addViewer(world, C) + " " + worlds.close(world));
+        };
+
+        assertTrue(worlds.close(world));
+
+        assertEquals(List.of("CLOSED false"), during);
+        assertEquals(Optional.empty(), worlds.worldOf(C));
+        assertEquals(List.of(), worlds.open());
+    }
+
+    @Test
     void closesEveryWorldAtOnce() {
         created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));

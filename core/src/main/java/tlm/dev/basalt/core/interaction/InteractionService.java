@@ -8,17 +8,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.UUID;
 
 public final class InteractionService {
 
     private final InteractionTools tools;
+    private final InteractionEvents events;
     private final InteractionSettings settings;
     private final Map<UUID, PlayerInteractions> players = new HashMap<>();
 
-    public InteractionService(InteractionTools tools, InteractionSettings settings) {
+    public InteractionService(InteractionTools tools, InteractionEvents events, InteractionSettings settings) {
         this.tools = tools;
+        this.events = events;
         this.settings = settings;
     }
 
@@ -53,14 +56,31 @@ public final class InteractionService {
                 context.stance().reach().entities(), settings.entityReachMargin())) {
             return InteractionOutcome.ignored(Refusal.OUT_OF_REACH);
         }
-        if (request.action() != EntityAction.ATTACK) {
-            return tools.entities().use(player, request.entity()) ? InteractionOutcome.done() : InteractionOutcome.ignored(Refusal.NO_ENTITY);
+        return switch (request.action()) {
+            case ATTACK -> attack(player, request.entity(), context);
+            case INTERACT -> events.usesEntity(player, request.entity(), request.hand()) ? use(player, request.entity())
+                    : InteractionOutcome.ignored(Refusal.CANCELLED);
+            case INTERACT_AT -> use(player, request.entity());
+        };
+    }
+
+    private InteractionOutcome attack(UUID player, int entity, InteractionContext context) {
+        if (!tools.entities().hitReady(player, entity)) {
+            return InteractionOutcome.ignored(Refusal.HIT_TOO_SOON);
         }
-        return switch (tools.entities().attack(player, request.entity(), context.held().damage())) {
+        OptionalDouble damage = events.damages(player, entity, context.held().damage());
+        if (damage.isEmpty()) {
+            return InteractionOutcome.ignored(Refusal.CANCELLED);
+        }
+        return switch (tools.entities().attack(player, entity, damage.getAsDouble())) {
             case HURT, KILLED -> InteractionOutcome.done();
             case TOO_SOON -> InteractionOutcome.ignored(Refusal.HIT_TOO_SOON);
             case GONE -> InteractionOutcome.ignored(Refusal.NO_ENTITY);
         };
+    }
+
+    private InteractionOutcome use(UUID player, int entity) {
+        return tools.entities().use(player, entity) ? InteractionOutcome.done() : InteractionOutcome.ignored(Refusal.NO_ENTITY);
     }
 
     private InteractionOutcome handleBlock(UUID player, BlockRequest request, InteractionContext context, PlayerInteractions state) {
@@ -85,7 +105,7 @@ public final class InteractionService {
     }
 
     public void tickDelayedBreaks() {
-        for (Map.Entry<UUID, PlayerInteractions> entry : players.entrySet()) {
+        for (Map.Entry<UUID, PlayerInteractions> entry : List.copyOf(players.entrySet())) {
             BreakTracker breaks = entry.getValue().breaks();
             breaks.delayed().ifPresent(position -> tickDelayed(entry.getKey(), breaks, position));
         }
@@ -116,7 +136,7 @@ public final class InteractionService {
         }
         if (context.mode() == GameMode.CREATIVE
                 || InteractionValidator.breaksAtOnce(progress(player, position, current.getAsInt(), context))) {
-            return breakNow(player, position, request.sequence());
+            return breakNow(player, position, current.getAsInt(), request.sequence());
         }
         List<BlockChange> updates = breaks.start(position, context.tick())
                 .flatMap(previous -> virtualState(player, previous))
@@ -139,7 +159,7 @@ public final class InteractionService {
         }
         float progress = progress(player, position, current.getAsInt(), context);
         return switch (breaks.stop(position, context.tick(), progress)) {
-            case BROKEN -> breakNow(player, position, request.sequence());
+            case BROKEN -> breakNow(player, position, current.getAsInt(), request.sequence());
             case DELAYED -> InteractionOutcome.refused(Refusal.TOO_EARLY, List.of(), false, request.sequence());
             case NOT_BREAKING -> InteractionOutcome.refused(Refusal.NOT_BREAKING, List.of(), false, request.sequence());
         };
@@ -163,10 +183,7 @@ public final class InteractionService {
             return InteractionOutcome.refused(Refusal.OUT_OF_REACH, List.of(), false, request.sequence());
         }
         BlockPosition neighbour = clicked.relative(request.face());
-        Placement placement = checkPlacement(player, clicked, neighbour, context);
-        if (placement.refusal() == null) {
-            tools.blocks().set(player, placement.target(), context.held().block().getAsInt());
-        }
+        Placement placement = place(player, request, context);
         List<BlockChange> updates = new ArrayList<>();
         virtualState(player, clicked).ifPresent(updates::add);
         virtualState(player, neighbour).ifPresent(updates::add);
@@ -177,7 +194,40 @@ public final class InteractionService {
         return InteractionOutcome.accepted(List.of(placed), updates, true, request.sequence());
     }
 
-    private Placement checkPlacement(UUID player, BlockPosition clicked, BlockPosition neighbour, InteractionContext context) {
+    private Placement place(UUID player, BlockRequest request, InteractionContext context) {
+        BlockPosition clicked = request.position();
+        OptionalInt clickedState = tools.blocks().stateAt(player, clicked);
+        if (clickedState.isEmpty()) {
+            return Placement.refused(Refusal.NOT_VIRTUAL);
+        }
+        if (!context.mode().usesBlocks()) {
+            return Placement.refused(Refusal.GAME_MODE);
+        }
+        if (!events.uses(player, clicked, clickedState.getAsInt(), request.face(), request.hand())) {
+            return Placement.refused(Refusal.CANCELLED);
+        }
+        Placement placement = checkPlacement(player, request, context);
+        if (placement.refusal() != null) {
+            return placement;
+        }
+        int block = context.held().block().getAsInt();
+        PlaceDecision decision = events.places(player, placement.target(), block, request.hand());
+        if (!decision.allowed()) {
+            return Placement.refused(Refusal.CANCELLED);
+        }
+        Placement after = checkPlacement(player, request, context);
+        if (after.refusal() != null) {
+            return after;
+        }
+        tools.blocks().set(player, after.target(), block);
+        if (decision.consume() && context.mode() != GameMode.CREATIVE) {
+            tools.world().consume(player, request.hand());
+        }
+        return after;
+    }
+
+    private Placement checkPlacement(UUID player, BlockRequest request, InteractionContext context) {
+        BlockPosition clicked = request.position();
         OptionalInt clickedState = tools.blocks().stateAt(player, clicked);
         if (clickedState.isEmpty()) {
             return Placement.refused(Refusal.NOT_VIRTUAL);
@@ -188,7 +238,7 @@ public final class InteractionService {
         if (!context.mode().changesBlocks()) {
             return Placement.refused(Refusal.GAME_MODE);
         }
-        BlockPosition target = tools.world().replaceable(clickedState.getAsInt()) ? clicked : neighbour;
+        BlockPosition target = tools.world().replaceable(clickedState.getAsInt()) ? clicked : clicked.relative(request.face());
         OptionalInt targetState = tools.blocks().stateAt(player, target);
         if (targetState.isEmpty()) {
             return Placement.refused(Refusal.TARGET_NOT_VIRTUAL);
@@ -202,7 +252,14 @@ public final class InteractionService {
         return new Placement(target, null);
     }
 
-    private InteractionOutcome breakNow(UUID player, BlockPosition position, int sequence) {
+    private InteractionOutcome breakNow(UUID player, BlockPosition position, int state, int sequence) {
+        if (!events.breaks(player, position, state)) {
+            return InteractionOutcome.refused(Refusal.CANCELLED, virtualState(player, position).map(List::of).orElse(List.of()), false, sequence);
+        }
+        OptionalInt now = tools.blocks().stateAt(player, position);
+        if (now.isEmpty() || tools.world().isAir(now.getAsInt())) {
+            return InteractionOutcome.refused(Refusal.AIR, virtualState(player, position).map(List::of).orElse(List.of()), false, sequence);
+        }
         int air = tools.world().air();
         tools.blocks().set(player, position, air);
         BlockChange change = new BlockChange(position, air);
@@ -217,8 +274,16 @@ public final class InteractionService {
             return;
         }
         float progress = progress(player, position, current.getAsInt(), context.get());
-        if (InteractionValidator.breaksWhenDelayed(progress, context.get().tick() - breaks.delayedSince())) {
-            breaks.clearDelayed();
+        if (!InteractionValidator.breaksWhenDelayed(progress, context.get().tick() - breaks.delayedSince())) {
+            return;
+        }
+        breaks.clearDelayed();
+        if (!events.breaks(player, position, current.getAsInt())) {
+            virtualState(player, position).ifPresent(update -> tools.replies().block(player, update.position(), update.state()));
+            return;
+        }
+        OptionalInt now = tools.blocks().stateAt(player, position);
+        if (now.isPresent() && !tools.world().isAir(now.getAsInt())) {
             int air = tools.world().air();
             tools.blocks().set(player, position, air);
             tools.replies().block(player, position, air);

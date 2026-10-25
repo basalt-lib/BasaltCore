@@ -11,11 +11,13 @@ public final class DebugCommands {
     private final DebugChunkCommand chunk;
     private final DebugEntityCommand entity;
     private final DebugWorldCommand world;
+    private final DebugEventsCommand events;
 
-    public DebugCommands(DebugChunkCommand chunk, DebugEntityCommand entity, DebugWorldCommand world) {
+    public DebugCommands(DebugChunkCommand chunk, DebugEntityCommand entity, DebugWorldCommand world, DebugEventsCommand events) {
         this.chunk = chunk;
         this.entity = entity;
         this.world = world;
+        this.events = events;
     }
 
     public LiteralCommandNode<CommandSourceStack> node() {
@@ -24,7 +26,8 @@ public final class DebugCommands {
                 .then(Commands.literal("debug")
                         .then(chunk.branch())
                         .then(entity.branch())
-                        .then(world.branch()))
+                        .then(world.branch())
+                        .then(events.branch()))
                 .build();
     }
 }

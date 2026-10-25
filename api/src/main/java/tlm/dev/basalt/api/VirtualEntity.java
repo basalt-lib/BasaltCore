@@ -11,9 +11,11 @@ import java.util.UUID;
 
 /**
  * An entity made of packets in a virtual world, seen by every viewer of the world and unknown to the server.
- * It has no behaviour: no AI, no gravity, no movement of its own and no equipment. A viewer can hit it and use it.
- * A hit takes the attack damage of the player, at least 1. At 0 health it dies: the viewers see its death,
- * and it is removed 20 ticks later.
+ * It has no behaviour: no AI, no gravity, no movement of its own and no equipment. A viewer can hit it, see
+ * {@link tlm.dev.basalt.api.event.VirtualEntityDamageEvent}, and use it, see {@link tlm.dev.basalt.api.event.VirtualEntityUseEvent}.
+ * A hit takes the attack damage of the player, at least 1. At 0 health it dies:
+ * {@link tlm.dev.basalt.api.event.VirtualEntityDeathEvent} is called, the viewers see its death, and it is removed
+ * 20 ticks later.
  * <p>
  * Every method runs on the main server thread only and throws {@link IllegalStateException} on another thread.
  * Get an entity from {@link VirtualWorld#spawnEntity(EntityType, Location)}, never implement this interface.

@@ -50,7 +50,7 @@ public final class MojangInteractionWorld implements InteractionWorld {
                 case ADVENTURE -> GameMode.ADVENTURE;
                 case SPECTATOR -> GameMode.SPECTATOR;
             };
-            ItemStack held = online.getItemInHand(hand == Hand.MAIN ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
+            ItemStack held = online.getItemInHand(handOf(hand));
             PlayerStance stance = new PlayerStance(new Point(eyes.x, eyes.y, eyes.z),
                     new Point(online.getX(), online.getY(), online.getZ()), online.onGround(),
                     new Reach(online.blockInteractionRange(), online.entityInteractionRange()));
@@ -70,6 +70,11 @@ public final class MojangInteractionWorld implements InteractionWorld {
                 online.onGround = simulated;
             }
         }).orElse(0.0F);
+    }
+
+    @Override
+    public void consume(UUID player, Hand hand) {
+        handle(player).ifPresent(online -> online.getItemInHand(handOf(hand)).shrink(1));
     }
 
     @Override
@@ -112,6 +117,10 @@ public final class MojangInteractionWorld implements InteractionWorld {
             return OptionalInt.empty();
         }
         return OptionalInt.of(Block.getId(state));
+    }
+
+    private static InteractionHand handOf(Hand hand) {
+        return hand == Hand.MAIN ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
     }
 
     private static BlockPos blockPos(BlockPosition position) {

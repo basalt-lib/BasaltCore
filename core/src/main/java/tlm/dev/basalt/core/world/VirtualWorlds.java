@@ -23,6 +23,7 @@ public final class VirtualWorlds<C> {
     private final Supplier<UUID> ids;
     private final Map<UUID, WorldSnapshot<C>> worlds = new ConcurrentHashMap<>();
     private final Map<UUID, UUID> viewing = new HashMap<>();
+    private final Set<UUID> closing = new HashSet<>();
 
     public VirtualWorlds(WorldTools<C> tools, WorldSettings settings, Supplier<UUID> ids) {
         this.tools = tools;
@@ -94,7 +95,7 @@ public final class VirtualWorlds<C> {
 
     public ViewerResult addViewer(UUID world, UUID player) {
         WorldSnapshot<C> snapshot = worlds.get(world);
-        if (snapshot == null) {
+        if (snapshot == null || closing.contains(world)) {
             return ViewerResult.CLOSED;
         }
         if (viewing.containsKey(player)) {
@@ -130,7 +131,7 @@ public final class VirtualWorlds<C> {
 
     public boolean close(UUID world) {
         WorldSnapshot<C> snapshot = worlds.get(world);
-        if (snapshot == null) {
+        if (snapshot == null || !closing.add(world)) {
             return false;
         }
         for (UUID viewer : snapshot.viewers()) {
@@ -138,6 +139,7 @@ public final class VirtualWorlds<C> {
             forgetViewer(world, viewer);
         }
         worlds.remove(world);
+        closing.remove(world);
         tools.listener().closed(world);
         return true;
     }

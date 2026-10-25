@@ -31,7 +31,8 @@ class InteractionServiceTest {
     private final FakePlayerBlocks blocks = new FakePlayerBlocks();
     private final FakeReplies replies = new FakeReplies();
     private final FakePlayerEntities entities = new FakePlayerEntities();
-    private InteractionService service = new InteractionService(new InteractionTools(world, blocks, entities, replies), new InteractionSettings(20, 1.0, 3.0));
+    private final FakeInteractionEvents events = new FakeInteractionEvents();
+    private InteractionService service = new InteractionService(new InteractionTools(world, blocks, entities, replies), events, new InteractionSettings(20, 1.0, 3.0));
 
     @BeforeEach
     void placeTheBasalt() {
@@ -223,7 +224,7 @@ class InteractionServiceTest {
 
     @Test
     void ignoresABurstOverTheBudget() {
-        service = new InteractionService(new InteractionTools(world, blocks, entities, replies), new InteractionSettings(2, 1.0, 3.0));
+        service = new InteractionService(new InteractionTools(world, blocks, entities, replies), events, new InteractionSettings(2, 1.0, 3.0));
         world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
 
         service.handle(A, use(BLOCK, BlockFace.UP, TOP, 1));
@@ -281,15 +282,16 @@ class InteractionServiceTest {
         assertEquals(Optional.of(Refusal.OUT_OF_REACH), service.handle(A, EntityRequest.attack(FAR)).refusal());
         assertEquals(Optional.of(Refusal.MALFORMED), service.handle(A, EntityRequest.interactAt(ZOMBIE, Hand.MAIN, new Point(Double.NaN, 0, 0))).refusal());
         assertEquals(Optional.of(Refusal.MALFORMED), service.handle(A, EntityRequest.interactAt(ZOMBIE, Hand.MAIN, new Point(0, 65, 0))).refusal());
-        entities.nextHit = EntityHit.TOO_SOON;
+        entities.ready = false;
         assertEquals(Optional.of(Refusal.HIT_TOO_SOON), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
+        entities.ready = true;
         entities.nextHit = EntityHit.GONE;
         assertEquals(Optional.of(Refusal.NO_ENTITY), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
         world.stand(A, GameMode.SPECTATOR, 100, OptionalInt.empty());
         assertEquals(Optional.of(Refusal.GAME_MODE), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
         assertEquals(Optional.of(Refusal.PLAYER_GONE), service.handle(B, EntityRequest.attack(ZOMBIE)).refusal());
 
-        assertEquals(List.of("attack #1001 for 1.0", "attack #1001 for 1.0"), entities.calls);
+        assertEquals(List.of("attack #1001 for 1.0"), entities.calls);
         assertEquals(List.of(), replies.sent);
     }
 
@@ -308,7 +310,7 @@ class InteractionServiceTest {
 
     @Test
     void sharesTheBudgetBetweenBlocksAndEntities() {
-        service = new InteractionService(new InteractionTools(world, blocks, entities, replies), new InteractionSettings(2, 1.0, 3.0));
+        service = new InteractionService(new InteractionTools(world, blocks, entities, replies), events, new InteractionSettings(2, 1.0, 3.0));
         world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
         entities.targets.put(ZOMBIE, NEAR_ZOMBIE);
 
@@ -327,6 +329,161 @@ class InteractionServiceTest {
         assertEquals(4.0, zombie.distanceSquaredFrom(new Point(2.8, 1.0, 0.5)), 1e-9);
         assertTrue(InteractionValidator.withinEntityReach(new Point(6.7, 1.0, 0.5), zombie, 3.0, 3.0));
         assertFalse(InteractionValidator.withinEntityReach(new Point(6.81, 1.0, 0.5), zombie, 3.0, 3.0));
+    }
+
+    @Test
+    void callsTheBreakEventBeforeBreakingAndKeepsACancelledBlock() {
+        world.stand(A, GameMode.CREATIVE, 100, OptionalInt.empty());
+        events.allowBreaks = false;
+
+        InteractionOutcome outcome = service.handle(A, start(BLOCK, 1));
+
+        assertEquals(Optional.of(Refusal.CANCELLED), outcome.refusal());
+        assertEquals(List.of("break 1029 -58 1029 = 2"), events.fired);
+        assertEquals(List.of("block 1029 -58 1029 = 2", "ack 1"), replies.sent);
+        assertEquals(OptionalInt.of(FakeInteractionWorld.BASALT), blocks.stateAt(A, BLOCK));
+    }
+
+    @Test
+    void breaksTheStateLeftByTheBreakEvent() {
+        world.stand(A, GameMode.CREATIVE, 100, OptionalInt.empty());
+        events.duringBreak = () -> blocks.put(A, BLOCK, FakeInteractionWorld.AIR);
+
+        assertEquals(Optional.of(Refusal.AIR), service.handle(A, start(BLOCK, 1)).refusal());
+        assertEquals(List.of("block 1029 -58 1029 = 0", "ack 1"), replies.sent);
+    }
+
+    @Test
+    void callsTheBreakEventWhenADelayedBreakEnds() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        service.handle(A, start(BLOCK, 1));
+        world.at(A, 111);
+        service.handle(A, stop(BLOCK, 2));
+        events.allowBreaks = false;
+
+        world.at(A, 118);
+        service.tickDelayedBreaks();
+        world.at(A, 119);
+        service.tickDelayedBreaks();
+
+        assertEquals(List.of("break 1029 -58 1029 = 2"), events.fired);
+        assertEquals(List.of("ack 1", "ack 2", "block 1029 -58 1029 = 2"), replies.sent);
+        assertEquals(OptionalInt.of(FakeInteractionWorld.BASALT), blocks.stateAt(A, BLOCK));
+    }
+
+    @Test
+    void callsTheUseEventThenThePlaceEvent() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.of(FakeInteractionWorld.STONE));
+
+        service.handle(A, use(BLOCK, BlockFace.UP, TOP, 1));
+
+        assertEquals(List.of("use 1029 -58 1029 = 2 UP MAIN", "place 1029 -57 1029 = 3 MAIN"), events.fired);
+        assertEquals(OptionalInt.of(FakeInteractionWorld.STONE), blocks.stateAt(A, ABOVE));
+        assertEquals(List.of(), world.consumed);
+    }
+
+    @Test
+    void aCancelledUseNeitherPlacesNorCallsThePlaceEvent() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.of(FakeInteractionWorld.STONE));
+        events.allowUses = false;
+
+        assertEquals(Optional.of(Refusal.CANCELLED), service.handle(A, use(BLOCK, BlockFace.UP, TOP, 1)).refusal());
+
+        assertEquals(List.of("use 1029 -58 1029 = 2 UP MAIN"), events.fired);
+        assertEquals(List.of("block 1029 -58 1029 = 2", "block 1029 -57 1029 = 0", "inventory", "ack 1"), replies.sent);
+        assertEquals(OptionalInt.of(FakeInteractionWorld.AIR), blocks.stateAt(A, ABOVE));
+    }
+
+    @Test
+    void aCancelledPlacementSendsTheBlocksAndTheInventoryBack() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.of(FakeInteractionWorld.STONE));
+        events.place = PlaceDecision.REFUSED;
+
+        assertEquals(Optional.of(Refusal.CANCELLED), service.handle(A, use(BLOCK, BlockFace.UP, TOP, 1)).refusal());
+
+        assertEquals(List.of("block 1029 -58 1029 = 2", "block 1029 -57 1029 = 0", "inventory", "ack 1"), replies.sent);
+        assertEquals(OptionalInt.of(FakeInteractionWorld.AIR), blocks.stateAt(A, ABOVE));
+    }
+
+    @Test
+    void consumesTheHeldItemWhenThePlaceEventAsksOutsideCreative() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.of(FakeInteractionWorld.STONE));
+        events.place = new PlaceDecision(true, true);
+
+        service.handle(A, use(BLOCK, BlockFace.UP, TOP, 1));
+        world.stand(A, GameMode.CREATIVE, 100, OptionalInt.of(FakeInteractionWorld.STONE));
+        blocks.put(A, ABOVE, FakeInteractionWorld.AIR);
+        service.handle(A, use(BLOCK, BlockFace.UP, TOP, 2));
+
+        assertEquals(List.of("consume MAIN"), world.consumed);
+        assertEquals(OptionalInt.of(FakeInteractionWorld.STONE), blocks.stateAt(A, ABOVE));
+    }
+
+    @Test
+    void checksThePlacementAgainAfterThePlaceEvent() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.of(FakeInteractionWorld.STONE));
+        events.place = new PlaceDecision(true, true);
+        events.duringPlace = () -> blocks.put(A, ABOVE, FakeInteractionWorld.BASALT);
+
+        assertEquals(Optional.of(Refusal.NOT_REPLACEABLE), service.handle(A, use(BLOCK, BlockFace.UP, TOP, 1)).refusal());
+
+        assertEquals(OptionalInt.of(FakeInteractionWorld.BASALT), blocks.stateAt(A, ABOVE));
+        assertEquals(List.of(), world.consumed);
+    }
+
+    @Test
+    void callsNoEventForASpectatorOrAnInvalidRequest() {
+        world.stand(A, GameMode.SPECTATOR, 100, OptionalInt.of(FakeInteractionWorld.STONE));
+        entities.targets.put(ZOMBIE, NEAR_ZOMBIE);
+
+        service.handle(A, use(BLOCK, BlockFace.UP, TOP, 1));
+        service.handle(A, start(BLOCK, 2));
+        service.handle(A, EntityRequest.attack(ZOMBIE));
+        world.stand(A, GameMode.CREATIVE, 100, OptionalInt.empty());
+        service.handle(A, start(new BlockPosition(1029, -58, 1035), 3));
+        service.handle(A, use(BLOCK, BlockFace.UP, new Point(1029.5, -55.0, 1029.5), 4));
+        service.handle(A, EntityRequest.attack(4242));
+
+        assertEquals(List.of(), events.fired);
+    }
+
+    @Test
+    void hitsWithTheDamageLeftByTheEventOrNotAtAll() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        entities.targets.put(ZOMBIE, NEAR_ZOMBIE);
+        events.damage = damage -> damage * 2;
+
+        service.handle(A, EntityRequest.attack(ZOMBIE));
+        events.cancelDamage = true;
+        assertEquals(Optional.of(Refusal.CANCELLED), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
+
+        assertEquals(List.of("damage #1001 1.0", "damage #1001 1.0"), events.fired);
+        assertEquals(List.of("attack #1001 for 2.0"), entities.calls);
+    }
+
+    @Test
+    void callsNoDamageEventForAHitTooSoon() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        entities.targets.put(ZOMBIE, NEAR_ZOMBIE);
+        entities.ready = false;
+
+        assertEquals(Optional.of(Refusal.HIT_TOO_SOON), service.handle(A, EntityRequest.attack(ZOMBIE)).refusal());
+
+        assertEquals(List.of(), events.fired);
+        assertEquals(List.of(), entities.calls);
+    }
+
+    @Test
+    void callsTheEntityUseEventForAPlainInteractionOnly() {
+        world.stand(A, GameMode.SURVIVAL, 100, OptionalInt.empty());
+        entities.targets.put(ZOMBIE, NEAR_ZOMBIE);
+        events.allowEntityUses = false;
+
+        assertEquals(Optional.of(Refusal.CANCELLED), service.handle(A, EntityRequest.interact(ZOMBIE, Hand.OFF)).refusal());
+        assertEquals(Optional.empty(), service.handle(A, EntityRequest.interactAt(ZOMBIE, Hand.MAIN, new Point(0.1, 1.2, -0.3))).refusal());
+
+        assertEquals(List.of("use #1001 OFF"), events.fired);
+        assertEquals(List.of("use #1001"), entities.calls);
     }
 
     private static InteractionRequest start(BlockPosition position, int sequence) {

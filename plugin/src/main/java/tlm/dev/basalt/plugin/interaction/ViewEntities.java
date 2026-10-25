@@ -28,6 +28,11 @@ public final class ViewEntities implements PlayerEntities {
     }
 
     @Override
+    public boolean hitReady(UUID player, int entity) {
+        return entities.hitReady(player, entity);
+    }
+
+    @Override
     public EntityHit attack(UUID player, int entity, double damage) {
         return switch (entities.attack(player, entity, damage)) {
             case HURT -> EntityHit.HURT;

@@ -94,7 +94,7 @@ final class WorldFacade implements VirtualWorld {
     public void addViewer(Player player) {
         open();
         Objects.requireNonNull(player, "player");
-        if (!player.isOnline()) {
+        if (!player.isOnline() || !player.isConnected()) {
             throw new IllegalStateException(player.getName() + " is not online");
         }
         if (!player.getWorld().getUID().equals(area.world().getUID())) {

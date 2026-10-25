@@ -4,7 +4,9 @@ import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.Point;
 
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -22,6 +24,7 @@ final class FakeInteractionWorld implements InteractionWorld {
     final Map<UUID, InteractionContext> contexts = new HashMap<>();
     final Map<Integer, Float> progress = new HashMap<>();
     final Set<BlockPosition> occupied = new HashSet<>();
+    final List<String> consumed = new ArrayList<>();
 
     void stand(UUID player, GameMode mode, long tick, OptionalInt heldBlock) {
         PlayerStance stance = new PlayerStance(new Point(1029.5, -58.38, 1027.5), new Point(1029.5, -60.0, 1027.5), true, new Reach(4.5, 3.0));
@@ -87,5 +90,10 @@ final class FakeInteractionWorld implements InteractionWorld {
     @Override
     public boolean unobstructed(UUID player, BlockPosition position, int state) {
         return !occupied.contains(position);
+    }
+
+    @Override
+    public void consume(UUID player, Hand hand) {
+        consumed.add("consume " + hand);
     }
 }

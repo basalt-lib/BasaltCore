@@ -287,7 +287,19 @@ class ChunkViewServiceTest {
         ordered.hide(PLAYER, ExitCause.COMMAND);
 
         assertEquals(List.of("entered 0 0", "send 0 0 while virtual", "sent 0 0",
-                "restart flying check while real", "resend 0 0 while real", "left COMMAND"), display.events);
+                "restart flying check while real", "resend 0 0 while real", "left COMMAND", "exited COMMAND"), display.events);
+    }
+
+    @Test
+    void tellsTheEndOfAnExitOnlyOnceTheViewIsClosed() {
+        ChunkViewService ordered = new ChunkViewService(display, new FakeChanges(display.events), new ChunkRequests());
+        ordered.track(PLAYER);
+        ordered.show(PLAYER, WORLD, ONE_CHUNK);
+        display.events.clear();
+
+        ordered.hide(PLAYER, ExitCause.DISCONNECT);
+
+        assertEquals(List.of("restart flying check while real", "left DISCONNECT", "detach", "exited DISCONNECT"), display.events);
     }
 
     @Test
@@ -300,8 +312,9 @@ class ChunkViewServiceTest {
         }
         service.show(OTHER, WORLD, ONE_CHUNK);
 
-        assertEquals(List.of("entered 0 0", "left COMMAND", "entered 0 0", "left WORLD_CLOSED", "entered 0 0", "left WORLD_CHANGE",
-                "entered 0 0", "left DISCONNECT", "entered 0 0", "left SHUTDOWN"), changed);
+        assertEquals(List.of("entered 0 0", "left COMMAND", "exited COMMAND", "entered 0 0", "left WORLD_CLOSED", "exited WORLD_CLOSED",
+                "entered 0 0", "left WORLD_CHANGE", "exited WORLD_CHANGE", "entered 0 0", "left DISCONNECT", "exited DISCONNECT",
+                "entered 0 0", "left SHUTDOWN", "exited SHUTDOWN"), changed);
     }
 
     @Test
@@ -322,8 +335,10 @@ class ChunkViewServiceTest {
         both.entered(PLAYER, WORLD, ONE_CHUNK);
         both.sent(PLAYER, WORLD, CHUNK);
         both.left(PLAYER, WORLD, ExitCause.COMMAND);
+        both.exited(PLAYER, WORLD, ExitCause.COMMAND);
 
-        assertEquals(List.of("entered 0 0", "entered 0 0", "sent 0 0", "sent 0 0", "left COMMAND", "left COMMAND"), heard);
+        assertEquals(List.of("entered 0 0", "entered 0 0", "sent 0 0", "sent 0 0", "left COMMAND", "left COMMAND",
+                "exited COMMAND", "exited COMMAND"), heard);
     }
 
     @Test

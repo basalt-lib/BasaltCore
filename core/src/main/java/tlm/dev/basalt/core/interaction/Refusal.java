@@ -17,5 +17,6 @@ public enum Refusal {
     OBSTRUCTED,
     NO_EFFECT,
     NO_ENTITY,
-    HIT_TOO_SOON
+    HIT_TOO_SOON,
+    CANCELLED
 }

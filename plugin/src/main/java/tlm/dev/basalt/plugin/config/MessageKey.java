@@ -27,7 +27,10 @@ public enum MessageKey {
     DEBUG_WORLD_NOT_VIEWING("debug-world-not-viewing"),
     DEBUG_WORLD_CLOSED("debug-world-closed"),
     DEBUG_WORLD_INFO("debug-world-info"),
-    DEBUG_WORLD_VISIBILITY("debug-world-visibility");
+    DEBUG_WORLD_VISIBILITY("debug-world-visibility"),
+    DEBUG_EVENTS_WATCHING("debug-events-watching"),
+    DEBUG_EVENTS_OFF("debug-events-off"),
+    DEBUG_EVENTS_STATUS("debug-events-status");
 
     private final String path;
 

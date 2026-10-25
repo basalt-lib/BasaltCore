@@ -60,6 +60,7 @@ public final class ChunkViewService implements ChunkViews {
             views.close(player);
             display.detach(player);
         }
+        left.ifPresent(previous -> changes.exited(player, previous.world(), cause));
         return left.isPresent() ? HideResult.RESTORED : HideResult.NOT_VIRTUAL;
     }
 

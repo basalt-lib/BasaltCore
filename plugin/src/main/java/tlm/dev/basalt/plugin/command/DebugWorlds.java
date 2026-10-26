@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public final class DebugWorlds {
 
@@ -33,6 +34,16 @@ public final class DebugWorlds {
 
     void remove(String name) {
         named.remove(name);
+    }
+
+    Map<String, UUID> liveIds() {
+        named.values().removeIf(VirtualWorld::isClosed);
+        return named.entrySet().stream().collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, entry -> entry.getValue().id()));
+    }
+
+    String labelOf(VirtualWorld world) {
+        return named.entrySet().stream().filter(entry -> entry.getValue().id().equals(world.id()))
+                .map(Map.Entry::getKey).findFirst().orElse(world.id().toString().substring(0, WorldQuery.MIN_PREFIX));
     }
 
     String nameOf(VirtualWorld world) {

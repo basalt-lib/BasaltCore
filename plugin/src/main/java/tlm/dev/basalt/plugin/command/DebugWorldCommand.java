@@ -6,6 +6,8 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
@@ -28,6 +30,7 @@ import tlm.dev.basalt.plugin.config.MessageSettings;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 public final class DebugWorldCommand implements DebugBranch {
@@ -60,7 +63,8 @@ public final class DebugWorldCommand implements DebugBranch {
                         .then(Commands.argument(PLAYER, StringArgumentType.word()).executes(this::add))))
                 .then(Commands.literal("remove").then(Commands.argument(PLAYER, StringArgumentType.word()).executes(this::remove)))
                 .then(Commands.literal("close").then(Commands.argument(NAME, StringArgumentType.word()).executes(this::close)))
-                .then(Commands.literal("info").then(Commands.argument(NAME, StringArgumentType.word()).executes(this::info)))
+                .then(Commands.literal("info").then(Commands.argument(NAME, StringArgumentType.word())
+                        .suggests(this::suggestWorlds).executes(this::info)))
                 .then(Commands.literal("visibility").then(visibilities(Commands.argument(NAME, StringArgumentType.word()))));
     }
 
@@ -177,22 +181,41 @@ public final class DebugWorldCommand implements DebugBranch {
 
     private int info(CommandContext<CommandSourceStack> context) {
         CommandSender sender = context.getSource().getSender();
-        String name = StringArgumentType.getString(context, NAME);
-        Optional<VirtualWorld> world = live(name);
-        if (world.isEmpty()) {
-            return reply(sender, MessageKey.DEBUG_WORLD_UNKNOWN, Placeholder.unparsed(WORLD, name));
-        }
-        List<String> viewers = world.get().viewers().stream().map(Player::getName).sorted().toList();
-        PacketMemory packets = named.memory(world.get());
-        sender.sendMessage(messages.render(MessageKey.DEBUG_WORLD_INFO, Placeholder.unparsed(WORLD, name),
+        String query = StringArgumentType.getString(context, NAME);
+        List<VirtualWorld> open = List.copyOf(basalt.worlds());
+        return switch (WorldQuery.pick(query, named.liveIds(), open.stream().map(VirtualWorld::id).toList())) {
+            case WorldQuery.Pick.Found found -> {
+                VirtualWorld world = open.stream().filter(candidate -> candidate.id().equals(found.id())).findFirst().orElseThrow();
+                sender.sendMessage(messages.render(MessageKey.DEBUG_WORLD_INFO, describe(world)));
+                yield Command.SINGLE_SUCCESS;
+            }
+            case WorldQuery.Pick.UnknownName unknown -> reply(sender, MessageKey.DEBUG_WORLD_UNKNOWN, Placeholder.unparsed(WORLD, query));
+            case WorldQuery.Pick.UnknownId unknown -> reply(sender, MessageKey.DEBUG_WORLD_UNKNOWN_ID, Placeholder.unparsed(WORLD, query));
+            case WorldQuery.Pick.Ambiguous ambiguous -> reply(sender, MessageKey.DEBUG_WORLD_AMBIGUOUS, Placeholder.unparsed(WORLD, query),
+                    Placeholder.unparsed("count", Integer.toString(ambiguous.count())));
+        };
+    }
+
+    private TagResolver describe(VirtualWorld world) {
+        List<String> viewers = world.viewers().stream().map(Player::getName).sorted().toList();
+        PacketMemory packets = named.memory(world);
+        return TagResolver.resolver(Placeholder.unparsed(WORLD, named.labelOf(world)),
                 Placeholder.unparsed("packets", Integer.toString(packets.packets())),
                 Placeholder.unparsed("bytes", Long.toString(packets.bytes())),
-                Placeholder.unparsed("id", world.get().id().toString()), area(world.get().area()),
-                Placeholder.unparsed("chunks", Long.toString(world.get().area().chunkCount())),
+                Placeholder.unparsed("id", world.id().toString()), area(world.area()),
+                Placeholder.unparsed("chunks", Long.toString(world.area().chunkCount())),
                 Placeholder.unparsed("count", Integer.toString(viewers.size())),
                 Placeholder.unparsed("viewers", viewers.isEmpty() ? "none" : String.join(",", viewers)),
-                Placeholder.unparsed("visibility", label(world.get().playerVisibility()))));
-        return Command.SINGLE_SUCCESS;
+                Placeholder.unparsed("visibility", label(world.playerVisibility())),
+                Placeholder.unparsed("owner", world.owner().getName()),
+                Placeholder.unparsed("real", world.area().world().getName()));
+    }
+
+    private CompletableFuture<Suggestions> suggestWorlds(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+        String typed = builder.getRemainingLowerCase();
+        named.liveIds().keySet().stream().filter(name -> name.startsWith(typed)).sorted().forEach(builder::suggest);
+        basalt.worlds().stream().map(world -> world.id().toString()).filter(id -> id.startsWith(typed)).sorted().forEach(builder::suggest);
+        return builder.buildFuture();
     }
 
     private Optional<VirtualWorld> live(String name) {

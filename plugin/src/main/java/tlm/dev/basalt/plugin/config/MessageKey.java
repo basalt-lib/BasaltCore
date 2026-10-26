@@ -23,6 +23,8 @@ public enum MessageKey {
     DEBUG_WORLD_EXISTS("debug-world-exists"),
     DEBUG_WORLD_REFUSED("debug-world-refused"),
     DEBUG_WORLD_UNKNOWN("debug-world-unknown"),
+    DEBUG_WORLD_UNKNOWN_ID("debug-world-unknown-id"),
+    DEBUG_WORLD_AMBIGUOUS("debug-world-ambiguous"),
     DEBUG_WORLD_ADDED("debug-world-added"),
     DEBUG_WORLD_VIEWER_REFUSED("debug-world-viewer-refused"),
     DEBUG_WORLD_REMOVED("debug-world-removed"),

@@ -45,7 +45,9 @@ public record ChunkArea(@NotNull World world, int minChunkX, int minChunkZ, int 
     /**
      * Returns the area of the chunks under a box of blocks. The box covers the blocks from the floor of its minimum corner
      * to the block before the ceiling of its maximum corner, and at least one block on each axis, so
-     * {@code BoundingBox.of(firstBlock, lastBlock)} covers exactly the blocks between those two.
+     * {@code BoundingBox.of(firstBlock, lastBlock)} covers exactly the blocks between those two. A maximum corner on a
+     * block boundary is excluded: a box from {@code (0, 0, 0)} to {@code (16, 16, 16)} covers the blocks 0 to 15 on each
+     * axis, one chunk.
      *
      * @param world the real world
      * @param box the box of blocks, in block coordinates

@@ -35,6 +35,8 @@ debug-blueprint-read: "<green>Read <blueprint> from <file>: size <size>, <blocks
 debug-blueprint-placed: "<green>Placed <blueprint> in <world> at <at> in <millis> ms."
 debug-blueprint-placed-real: "<green>Placed <blueprint> in the real world <world> at <at> in <millis> ms."
 debug-blueprint-refused: "<red>Refused <blueprint>: <reason>"
+debug-blueprint-unreadable: "<red>Cannot read <file> for <blueprint>: <cause>"
+debug-blueprint-real-empty: "<red>The structure template of Mojang placed nothing for <blueprint>."
 debug-blueprint-unknown: "<red>No blueprint is named <blueprint>."
 debug-blueprint-bad-name: "<red><blueprint> is not a valid blueprint name: 1 to 32 lowercase letters, digits, - or _."
 debug-blueprint-bad-file: "<red><file> is not a file of the blueprints folder for <blueprint>: letters, digits, dots, - or _."

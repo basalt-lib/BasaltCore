@@ -38,6 +38,8 @@ public enum MessageKey {
     DEBUG_BLUEPRINT_PLACED("debug-blueprint-placed"),
     DEBUG_BLUEPRINT_PLACED_REAL("debug-blueprint-placed-real"),
     DEBUG_BLUEPRINT_REFUSED("debug-blueprint-refused"),
+    DEBUG_BLUEPRINT_UNREADABLE("debug-blueprint-unreadable"),
+    DEBUG_BLUEPRINT_REAL_EMPTY("debug-blueprint-real-empty"),
     DEBUG_BLUEPRINT_UNKNOWN("debug-blueprint-unknown"),
     DEBUG_BLUEPRINT_BAD_NAME("debug-blueprint-bad-name"),
     DEBUG_BLUEPRINT_BAD_FILE("debug-blueprint-bad-file"),

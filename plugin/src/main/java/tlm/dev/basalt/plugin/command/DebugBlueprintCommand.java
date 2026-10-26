@@ -120,7 +120,9 @@ public final class DebugBlueprintCommand implements DebugBranch {
         Blueprint blueprint;
         try {
             blueprint = basalt.readBlueprint(path.get());
-        } catch (IOException | BlueprintException refused) {
+        } catch (IOException unreadable) {
+            return unreadable(sender, name, file, unreadable);
+        } catch (BlueprintException refused) {
             return refused(sender, name, refused);
         }
         long millis = millisSince(start);
@@ -167,15 +169,17 @@ public final class DebugBlueprintCommand implements DebugBranch {
         World world = context.getSource().getLocation().getWorld();
         BlockPosition at = position(context, "x", "y", "z");
         long start = System.nanoTime();
+        Path file = named.get().file().get();
         boolean placed;
         try {
-            placed = tools.real().place(world, named.get().file().get(), at.x(), at.y(), at.z());
-        } catch (IOException | RuntimeException refused) {
+            placed = tools.real().place(world, file, at.x(), at.y(), at.z());
+        } catch (IOException unreadable) {
+            return unreadable(sender, name, file.getFileName().toString(), unreadable);
+        } catch (RuntimeException refused) {
             return refused(sender, name, refused);
         }
         if (!placed) {
-            return reply(sender, MessageKey.DEBUG_BLUEPRINT_REFUSED, Placeholder.unparsed(BLUEPRINT, name),
-                    Placeholder.unparsed("reason", "the structure template of Mojang placed nothing"));
+            return reply(sender, MessageKey.DEBUG_BLUEPRINT_REAL_EMPTY, Placeholder.unparsed(BLUEPRINT, name));
         }
         sender.sendMessage(messages.render(MessageKey.DEBUG_BLUEPRINT_PLACED_REAL, Placeholder.unparsed(BLUEPRINT, name),
                 Placeholder.unparsed(WORLD, world.getName()), at(at), millis(millisSince(start))));
@@ -233,6 +237,11 @@ public final class DebugBlueprintCommand implements DebugBranch {
     private int refused(CommandSender sender, String name, Exception refused) {
         return reply(sender, MessageKey.DEBUG_BLUEPRINT_REFUSED, Placeholder.unparsed(BLUEPRINT, name),
                 Placeholder.unparsed("reason", String.valueOf(refused.getMessage())));
+    }
+
+    private int unreadable(CommandSender sender, String name, String file, IOException unreadable) {
+        return reply(sender, MessageKey.DEBUG_BLUEPRINT_UNREADABLE, Placeholder.unparsed(BLUEPRINT, name),
+                Placeholder.unparsed(FILE, file), Placeholder.unparsed("cause", unreadable.getClass().getSimpleName()));
     }
 
     private int reply(CommandSender sender, MessageKey key, TagResolver... resolvers) {

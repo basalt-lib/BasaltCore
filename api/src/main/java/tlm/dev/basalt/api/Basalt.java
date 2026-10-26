@@ -34,6 +34,12 @@ public interface Basalt {
     /**
      * Creates an empty virtual world on an area of a real world, with no viewer.
      * Loads the real chunks of the area and checks they hold only air.
+     * <p>
+     * The check loads every real chunk of the area on the main thread, at once, and generates the chunks that were never
+     * generated: for chunks that are not loaded it costs tens of milliseconds, and more for new chunks. Keeping the area
+     * loaded, for instance with {@link World#addPluginChunkTicket(int, int, Plugin)} on each of its chunks, makes the
+     * check almost free.
+     * <p>
      * The world belongs to its owner: Basalt closes it when the owner is disabled, before the owner's own
      * {@code onDisable} runs. A world never closes because it has no viewer: it lives until {@link VirtualWorld#close()},
      * the disabling of its owner or the stop of BasaltCore.

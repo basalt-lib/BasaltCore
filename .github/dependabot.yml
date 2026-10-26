@@ -8,6 +8,8 @@ updates:
     ignore:
       - dependency-name: io.papermc.paper:paper-api
       - dependency-name: io.papermc.paperweight.userdev*
+      - dependency-name: org.junit:junit-bom
+        update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     schedule:

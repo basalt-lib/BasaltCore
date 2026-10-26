@@ -117,7 +117,7 @@ public final class DebugWorldCommand implements DebugBranch {
         int z1 = IntegerArgumentType.getInteger(context, CORNERS.get(1));
         int x2 = IntegerArgumentType.getInteger(context, CORNERS.get(2));
         int z2 = IntegerArgumentType.getInteger(context, CORNERS.get(3));
-        World world = sender instanceof Player player ? player.getWorld() : server.getWorlds().getFirst();
+        World world = SourceWorld.of(context.getSource());
         ChunkArea area = new ChunkArea(world, Math.min(x1, x2), Math.min(z1, z2), Math.max(x1, x2), Math.max(z1, z2));
         VirtualWorld created;
         try {
@@ -129,7 +129,8 @@ public final class DebugWorldCommand implements DebugBranch {
         pattern.ifPresent(painted -> DebugPainter.paint(created, server, painted));
         named.put(name, created);
         sender.sendMessage(messages.render(MessageKey.DEBUG_WORLD_CREATED, Placeholder.unparsed(WORLD, name), area(area),
-                Placeholder.unparsed("pattern", pattern.map(DebugPattern::label).orElse("empty"))));
+                Placeholder.unparsed("pattern", pattern.map(DebugPattern::label).orElse("empty")),
+                Placeholder.unparsed("real", world.getName())));
         return Command.SINGLE_SUCCESS;
     }
 

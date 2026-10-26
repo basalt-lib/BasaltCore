@@ -86,7 +86,7 @@ public final class DebugBlueprintCommand implements DebugBranch {
         if (!VALID_NAME.matcher(name).matches()) {
             return reply(sender, MessageKey.DEBUG_BLUEPRINT_BAD_NAME, Placeholder.unparsed(BLUEPRINT, name));
         }
-        World world = context.getSource().getLocation().getWorld();
+        World world = SourceWorld.of(context.getSource());
         BlockPosition first = position(context, "x1", "y1", "z1");
         BlockPosition second = position(context, "x2", "y2", "z2");
         BoundingBox box = new BoundingBox(Math.min(first.x(), second.x()), Math.min(first.y(), second.y()), Math.min(first.z(), second.z()),
@@ -166,7 +166,7 @@ public final class DebugBlueprintCommand implements DebugBranch {
         if (named.get().file().isEmpty()) {
             return reply(sender, MessageKey.DEBUG_BLUEPRINT_NO_FILE, Placeholder.unparsed(BLUEPRINT, name));
         }
-        World world = context.getSource().getLocation().getWorld();
+        World world = SourceWorld.of(context.getSource());
         BlockPosition at = position(context, "x", "y", "z");
         long start = System.nanoTime();
         Path file = named.get().file().get();

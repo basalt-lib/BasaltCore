@@ -11,6 +11,11 @@
 - Blueprints: capture a real area, load a vanilla `.nbt` structure or a Sponge `.schem`
 - Packets only: no extra world, no server fork, no client mod
 
+## Showcase
+
+<p align="center"><a href="https://www.youtube.com/watch?v=KCYVns9mYfQ"><img src="assets/showcase.jpg" width="640" alt="Basalt showcase video"></a></p>
+<p align="center"><a href="https://www.youtube.com/watch?v=KCYVns9mYfQ">Watch the showcase on YouTube</a></p>
+
 ## Quick look
 
 From [RunWorlds](https://github.com/basalt-lib/BasaltDemo/blob/master/src/main/java/tlm/dev/basalt/demo/play/RunWorlds.java) in BasaltDemo. Main thread only. Teleport the player into the area's world before `addViewer`.

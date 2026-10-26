@@ -66,7 +66,8 @@ public interface Basalt {
     /**
      * Captures the real blocks of a box into a blueprint, block states only. Loads the real chunks it needs.
      * The box covers the blocks from the floor of its minimum corner to the block before the ceiling of its maximum corner,
-     * and at least one block on each axis, like {@link VirtualWorld#fill(BoundingBox, org.bukkit.block.data.BlockData)}.
+     * and at least one block on each axis, like {@link VirtualWorld#fill(BoundingBox, org.bukkit.block.data.BlockData)}:
+     * a box from {@code (0, 0, 0)} to {@code (16, 16, 16)} captures the blocks 0 to 15 on each axis.
      * Later changes of the real world do not change the blueprint.
      *
      * @param world the real world

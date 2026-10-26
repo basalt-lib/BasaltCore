@@ -183,6 +183,11 @@ public interface VirtualWorld {
     /**
      * Closes this world. Every viewer gets the real world back and the blocks of this world are freed.
      * Does nothing if the world is already closed.
+     * <p>
+     * The viewers leave one after the other, each with a {@link tlm.dev.basalt.api.event.VirtualViewerRemoveEvent} of
+     * reason {@code WORLD_CLOSED}. While the world closes, for instance inside one of those handlers, calling this method
+     * again does nothing, {@link #addViewer(Player)} throws {@link IllegalStateException} and {@link #isClosed()} still
+     * returns false; the world is closed once the last viewer has left.
      */
     void close();
 }

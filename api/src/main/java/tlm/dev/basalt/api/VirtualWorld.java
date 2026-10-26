@@ -86,7 +86,8 @@ public interface VirtualWorld {
      * Sets every block of a box to the same block, then sends the changed chunks to every viewer again.
      * The box covers the blocks from the floor of its minimum corner to the block before the ceiling of its maximum corner,
      * and at least one block on each axis, so {@code BoundingBox.of(firstBlock, lastBlock)} fills exactly the blocks
-     * between those two.
+     * between those two. A maximum corner on a block boundary is excluded: a box from {@code (0, 0, 0)} to
+     * {@code (16, 16, 16)} fills the blocks 0 to 15 on each axis.
      *
      * @param box the box of blocks, in block coordinates
      * @param data the new block

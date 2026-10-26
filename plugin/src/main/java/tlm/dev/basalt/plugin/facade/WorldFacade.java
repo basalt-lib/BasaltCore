@@ -155,10 +155,15 @@ final class WorldFacade implements VirtualWorld {
         BlockPlan plan = facade.plan();
         BlockBox volume = new BlockBox(position(x, y, z), position(x + plan.size().sizeX() - 1, y + plan.size().sizeY() - 1, z + plan.size().sizeZ() - 1));
         HostArea host = tools.worlds().snapshot(id).orElseThrow(this::closed).host();
+        String where = text(volume.min()) + " to " + text(volume.max());
         if (!host.contains(volume)) {
-            throw outside(volume.min() + " to " + volume.max());
+            throw outside(where);
         }
-        edited(tools.worlds().write(id, BlockPlacer.writes(plan, volume.min(), host.minY(), host.height() / 16)), volume.min() + " to " + volume.max());
+        edited(tools.worlds().write(id, BlockPlacer.writes(plan, volume.min(), host.minY(), host.height() / 16)), where);
+    }
+
+    private static String text(BlockPosition position) {
+        return position.x() + " " + position.y() + " " + position.z();
     }
 
     @Override

@@ -3,16 +3,25 @@ package tlm.dev.basalt.plugin.facade;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.BoundingBox;
 import tlm.dev.basalt.api.Basalt;
+import tlm.dev.basalt.api.Blueprint;
+import tlm.dev.basalt.api.BlueprintException;
 import tlm.dev.basalt.api.ChunkArea;
 import tlm.dev.basalt.api.HostAreaException;
 import tlm.dev.basalt.api.VirtualWorld;
+import tlm.dev.basalt.core.blueprint.PlanException;
+import tlm.dev.basalt.core.position.BlockBox;
 import tlm.dev.basalt.core.position.ChunkRange;
 import tlm.dev.basalt.core.world.Creation;
 import tlm.dev.basalt.core.world.HostArea;
 import tlm.dev.basalt.core.world.HostRule;
 import tlm.dev.basalt.core.world.RealBlock;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,6 +67,48 @@ public final class BasaltFacade implements Basalt {
         tools.checkThread();
         Objects.requireNonNull(player, "player");
         return tools.worlds().worldOf(player.getUniqueId()).map(facades::get).orElse(null);
+    }
+
+    @Override
+    public Blueprint captureBlueprint(World world, BoundingBox box) {
+        tools.checkThread();
+        Objects.requireNonNull(world, "world");
+        Objects.requireNonNull(box, "box");
+        if (tools.server().getWorld(world.getUID()) == null) {
+            throw new IllegalStateException("world " + world.getName() + " is not loaded");
+        }
+        BlockBox blocks = BlockBoxes.of(box);
+        if (blocks.min().y() < world.getMinHeight() || blocks.max().y() >= world.getMaxHeight()) {
+            throw new IllegalArgumentException("the box " + blocks.min().y() + " to " + blocks.max().y() + " leaves the height "
+                    + world.getMinHeight() + " to " + (world.getMaxHeight() - 1) + " of " + world.getName());
+        }
+        if (blocks.volume() > tools.content().plans().settings().maxBlocks()) {
+            throw new IllegalArgumentException("the box holds " + blocks.volume() + " blocks, more than "
+                    + tools.content().plans().settings().maxBlocks() + " (blueprint.max-blocks)");
+        }
+        return new BlueprintFacade(tools.content().plans().capture(world.getUID(), blocks));
+    }
+
+    @Override
+    public Blueprint readBlueprint(Path file) throws IOException {
+        Objects.requireNonNull(file, "file");
+        try (InputStream in = Files.newInputStream(file)) {
+            return readBlueprint(in);
+        }
+    }
+
+    @Override
+    public Blueprint readBlueprint(InputStream in) throws IOException {
+        Objects.requireNonNull(in, "in");
+        try {
+            return new BlueprintFacade(tools.content().plans().read(in));
+        } catch (PlanException refused) {
+            throw new BlueprintException(refused.getMessage(), refused);
+        }
+    }
+
+    public long bytesOf(Blueprint blueprint) {
+        return blueprint instanceof BlueprintFacade facade ? facade.plan().bytes() : 0;
     }
 
     private VirtualWorld create(Plugin owner, ChunkArea area, HostRule rule) {

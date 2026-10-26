@@ -29,7 +29,7 @@ import tlm.dev.basalt.plugin.config.MessageSettings;
 import java.util.List;
 import java.util.Locale;
 
-public final class DebugEntityCommand {
+public final class DebugEntityCommand implements DebugBranch {
 
     private static final String PLAYER = "player";
     private static final String X = "x";
@@ -54,6 +54,7 @@ public final class DebugEntityCommand {
         this.messages = messages;
     }
 
+    @Override
     public LiteralArgumentBuilder<CommandSourceStack> branch() {
         return Commands.literal("entity")
                 .then(Commands.argument(PLAYER, StringArgumentType.word())

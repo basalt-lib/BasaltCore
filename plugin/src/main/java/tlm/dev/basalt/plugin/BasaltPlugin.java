@@ -5,6 +5,8 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import tlm.dev.basalt.api.Basalt;
 import tlm.dev.basalt.api.BasaltProvider;
+import tlm.dev.basalt.core.blueprint.PlanService;
+import tlm.dev.basalt.core.blueprint.PlanSettings;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.entity.EntitySettings;
 import tlm.dev.basalt.core.entity.EntityShapes;
@@ -24,6 +26,7 @@ import tlm.dev.basalt.core.world.WorldChunks;
 import tlm.dev.basalt.core.world.WorldListener;
 import tlm.dev.basalt.core.world.WorldSettings;
 import tlm.dev.basalt.core.world.WorldTools;
+import tlm.dev.basalt.nms.MojangBlueprints;
 import tlm.dev.basalt.nms.MojangChunkViews;
 import tlm.dev.basalt.nms.MojangEntities;
 import tlm.dev.basalt.nms.MojangInteractions;
@@ -31,12 +34,16 @@ import tlm.dev.basalt.nms.MojangWorlds;
 import tlm.dev.basalt.nms.platform.MojangBlockStates;
 import tlm.dev.basalt.nms.platform.MojangGameVersionSource;
 import tlm.dev.basalt.nms.port.WorldSource;
+import tlm.dev.basalt.plugin.command.BlueprintDebugTools;
+import tlm.dev.basalt.plugin.command.DebugBlueprintCommand;
 import tlm.dev.basalt.plugin.command.DebugChunkCommand;
 import tlm.dev.basalt.plugin.command.DebugCommands;
 import tlm.dev.basalt.plugin.command.DebugEventWatch;
 import tlm.dev.basalt.plugin.command.DebugEventsCommand;
 import tlm.dev.basalt.plugin.command.DebugWorldCommand;
+import tlm.dev.basalt.plugin.command.DebugWorlds;
 import tlm.dev.basalt.plugin.command.DebugEntityCommand;
+import tlm.dev.basalt.plugin.config.BlueprintSettingsParser;
 import tlm.dev.basalt.plugin.config.ConfigFile;
 import tlm.dev.basalt.plugin.config.ConfigReader;
 import tlm.dev.basalt.plugin.config.EntityMaskSettingsParser;
@@ -51,7 +58,7 @@ import tlm.dev.basalt.plugin.entity.ChunkEntityViews;
 import tlm.dev.basalt.plugin.entity.EntityExits;
 import tlm.dev.basalt.plugin.entity.EntityTicker;
 import tlm.dev.basalt.plugin.facade.BasaltFacade;
-import tlm.dev.basalt.plugin.facade.ConversionTools;
+import tlm.dev.basalt.plugin.facade.ContentTools;
 import tlm.dev.basalt.plugin.facade.FacadeTools;
 import tlm.dev.basalt.plugin.facade.ServiceRegistration;
 import tlm.dev.basalt.plugin.interaction.BukkitInteractionEvents;
@@ -80,6 +87,9 @@ import tlm.dev.basalt.plugin.world.ViewerEvents;
 import tlm.dev.basalt.plugin.world.WorldExits;
 import tlm.dev.basalt.plugin.world.WorldSessions;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -98,6 +108,7 @@ public final class BasaltPlugin extends JavaPlugin {
         EntityMaskSettings maskSettings = EntityMaskSettingsParser.parse(reader);
         EntitySettings entitySettings = EntitySettingsParser.parse(reader);
         WorldSettings worldSettings = WorldSettingsParser.parse(reader);
+        PlanSettings planSettings = BlueprintSettingsParser.parse(reader);
         InteractionQueues queues = new InteractionQueues(settings.maxActionsPerSecond());
         MaskedViewers masks = new MaskedViewers(this, new EntityMasking(maskSettings.maxEntitiesPerScan()));
         AtomicReference<ChunkViews> viewsOnceCreated = new AtomicReference<>();
@@ -121,7 +132,8 @@ public final class BasaltPlugin extends JavaPlugin {
                         new ViewerEvents(basaltOnceCreated::get, getServer()))))), new WorldSource(worlds, chunks, encoders));
         viewsOnceCreated.set(views);
         MojangBlockStates blockStates = new MojangBlockStates();
-        BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion(), new FacadeTools(getServer(), worlds, entities, new ConversionTools(blockStates, shapes)));
+        PlanService plans = new PlanService(MojangBlueprints.names(), MojangBlueprints.realBlocks(getServer()), planSettings);
+        BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion(), new FacadeTools(getServer(), worlds, entities, new ContentTools(blockStates, shapes, plans)));
         basaltOnceCreated.set(basalt);
         InteractionService interactions = new InteractionService(new InteractionTools(MojangInteractions.world(getServer()),
                 new ViewBlocks(worlds), new ViewEntities(entities, shapes), replies), new BukkitInteractionEvents(basalt, getServer(), blockStates), settings);
@@ -148,9 +160,16 @@ public final class BasaltPlugin extends JavaPlugin {
         plugins.registerEvents(new SeparationQuitListener(separations), this);
         DebugEventWatch eventWatch = new DebugEventWatch(this);
         eventWatch.listen();
-        DebugCommands commands = new DebugCommands(new DebugChunkCommand(basalt, area -> basalt.createWorldOverRealBlocks(this, area), getServer(), messages),
-                new DebugEntityCommand(basalt, entities, getServer(), messages), new DebugWorldCommand(basalt, this, messages, views::memory),
-                new DebugEventsCommand(eventWatch, getServer(), messages));
+        DebugWorlds debugWorlds = new DebugWorlds(views::memory);
+        Path blueprintFolder = blueprintFolder();
+        BlueprintDebugTools blueprintTools = new BlueprintDebugTools(blueprintFolder,
+                (world, file, x, y, z) -> MojangBlueprints.placeReal(world, file, planSettings.maxFileBytes(), x, y, z), basalt::bytesOf);
+        DebugCommands commands = new DebugCommands(List.of(
+                new DebugChunkCommand(basalt, area -> basalt.createWorldOverRealBlocks(this, area), getServer(), messages),
+                new DebugEntityCommand(basalt, entities, getServer(), messages),
+                new DebugWorldCommand(basalt, this, messages, debugWorlds),
+                new DebugEventsCommand(eventWatch, getServer(), messages),
+                new DebugBlueprintCommand(basalt, debugWorlds, blueprintTools, messages)));
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> event.registrar().register(commands.node()));
 
         GameVersion game = new MojangGameVersionSource().current();
@@ -163,6 +182,16 @@ public final class BasaltPlugin extends JavaPlugin {
         if (lifecycle != null) {
             lifecycle.disable();
         }
+    }
+
+    private Path blueprintFolder() {
+        Path folder = getDataFolder().toPath().resolve("blueprints");
+        try {
+            Files.createDirectories(folder);
+        } catch (IOException unwritable) {
+            getLogger().warning("Cannot create the blueprints folder " + folder + ": " + unwritable.getMessage());
+        }
+        return folder;
     }
 
     private void registerListeners(ChunkViews views) {

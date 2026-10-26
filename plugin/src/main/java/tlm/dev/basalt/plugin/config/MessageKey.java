@@ -32,7 +32,19 @@ public enum MessageKey {
     DEBUG_WORLD_VISIBILITY("debug-world-visibility"),
     DEBUG_EVENTS_WATCHING("debug-events-watching"),
     DEBUG_EVENTS_OFF("debug-events-off"),
-    DEBUG_EVENTS_STATUS("debug-events-status");
+    DEBUG_EVENTS_STATUS("debug-events-status"),
+    DEBUG_BLUEPRINT_CAPTURED("debug-blueprint-captured"),
+    DEBUG_BLUEPRINT_READ("debug-blueprint-read"),
+    DEBUG_BLUEPRINT_PLACED("debug-blueprint-placed"),
+    DEBUG_BLUEPRINT_PLACED_REAL("debug-blueprint-placed-real"),
+    DEBUG_BLUEPRINT_REFUSED("debug-blueprint-refused"),
+    DEBUG_BLUEPRINT_UNKNOWN("debug-blueprint-unknown"),
+    DEBUG_BLUEPRINT_BAD_NAME("debug-blueprint-bad-name"),
+    DEBUG_BLUEPRINT_BAD_FILE("debug-blueprint-bad-file"),
+    DEBUG_BLUEPRINT_NO_FILE("debug-blueprint-no-file"),
+    DEBUG_BLUEPRINT_LIST("debug-blueprint-list"),
+    DEBUG_BLUEPRINT_DROPPED("debug-blueprint-dropped"),
+    DEBUG_BLUEPRINT_INFO("debug-blueprint-info");
 
     private final String path;
 

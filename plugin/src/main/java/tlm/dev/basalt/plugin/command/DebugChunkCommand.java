@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 
-public final class DebugChunkCommand {
+public final class DebugChunkCommand implements DebugBranch {
 
     private static final String PLAYER = "player";
     private static final String CHUNK_X = "cx";
@@ -43,6 +43,7 @@ public final class DebugChunkCommand {
         this.messages = messages;
     }
 
+    @Override
     public LiteralArgumentBuilder<CommandSourceStack> branch() {
         return Commands.literal("chunk")
                 .then(Commands.argument(PLAYER, StringArgumentType.word())

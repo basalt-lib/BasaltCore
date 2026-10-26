@@ -7,15 +7,19 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BoundingBox;
 import tlm.dev.basalt.api.ChunkArea;
+import tlm.dev.basalt.api.Blueprint;
 import tlm.dev.basalt.api.PlayerVisibility;
 import tlm.dev.basalt.api.VirtualEntity;
 import tlm.dev.basalt.api.VirtualWorld;
+import tlm.dev.basalt.core.blueprint.BlockPlacer;
+import tlm.dev.basalt.core.blueprint.BlockPlan;
 import tlm.dev.basalt.core.entity.EntityResult;
 import tlm.dev.basalt.core.entity.Rotation;
 import tlm.dev.basalt.core.position.BlockBox;
 import tlm.dev.basalt.core.position.BlockPosition;
 import tlm.dev.basalt.core.position.Point;
 import tlm.dev.basalt.core.world.EditResult;
+import tlm.dev.basalt.core.world.HostArea;
 import tlm.dev.basalt.core.world.WorldSnapshot;
 
 import java.util.HashSet;
@@ -71,14 +75,14 @@ final class WorldFacade implements VirtualWorld {
         if (state.isEmpty()) {
             throw outside(x + " " + y + " " + z);
         }
-        return tools.conversions().blocks().dataOf(state.getAsInt());
+        return tools.content().blocks().dataOf(state.getAsInt());
     }
 
     @Override
     public void setBlock(int x, int y, int z, BlockData data) {
         open();
         Objects.requireNonNull(data, "data");
-        edited(tools.worlds().setBlock(id, position(x, y, z), tools.conversions().blocks().stateOf(data)), x + " " + y + " " + z);
+        edited(tools.worlds().setBlock(id, position(x, y, z), tools.content().blocks().stateOf(data)), x + " " + y + " " + z);
     }
 
     @Override
@@ -87,7 +91,7 @@ final class WorldFacade implements VirtualWorld {
         Objects.requireNonNull(box, "box");
         Objects.requireNonNull(data, "data");
         BlockBox blocks = BlockBoxes.of(box);
-        edited(tools.worlds().fill(id, blocks, tools.conversions().blocks().stateOf(data)), blocks.min() + " to " + blocks.max());
+        edited(tools.worlds().fill(id, blocks, tools.content().blocks().stateOf(data)), blocks.min() + " to " + blocks.max());
     }
 
     @Override
@@ -142,10 +146,26 @@ final class WorldFacade implements VirtualWorld {
     }
 
     @Override
+    public void place(Blueprint blueprint, int x, int y, int z) {
+        open();
+        Objects.requireNonNull(blueprint, "blueprint");
+        if (!(blueprint instanceof BlueprintFacade facade)) {
+            throw new IllegalArgumentException("the blueprint does not come from Basalt");
+        }
+        BlockPlan plan = facade.plan();
+        BlockBox volume = new BlockBox(position(x, y, z), position(x + plan.size().sizeX() - 1, y + plan.size().sizeY() - 1, z + plan.size().sizeZ() - 1));
+        HostArea host = tools.worlds().snapshot(id).orElseThrow(this::closed).host();
+        if (!host.contains(volume)) {
+            throw outside(volume.min() + " to " + volume.max());
+        }
+        edited(tools.worlds().write(id, BlockPlacer.writes(plan, volume.min(), host.minY(), host.height() / 16)), volume.min() + " to " + volume.max());
+    }
+
+    @Override
     public VirtualEntity spawnEntity(EntityType type, Location location) {
         open();
         Objects.requireNonNull(type, "type");
-        if (type == EntityType.UNKNOWN || !tools.conversions().entities().creatable(type.getKey().toString())) {
+        if (type == EntityType.UNKNOWN || !tools.content().entities().creatable(type.getKey().toString())) {
             throw new IllegalArgumentException(type + " cannot be summoned");
         }
         Point at = pointOf(location);

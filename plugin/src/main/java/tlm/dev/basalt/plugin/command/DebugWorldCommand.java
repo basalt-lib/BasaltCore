@@ -25,16 +25,12 @@ import tlm.dev.basalt.core.visibility.PacketMemory;
 import tlm.dev.basalt.plugin.config.MessageKey;
 import tlm.dev.basalt.plugin.config.MessageSettings;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 
-public final class DebugWorldCommand {
+public final class DebugWorldCommand implements DebugBranch {
 
     private static final String NAME = "name";
     private static final String PLAYER = "player";
@@ -46,17 +42,17 @@ public final class DebugWorldCommand {
     private final Plugin plugin;
     private final Server server;
     private final MessageSettings messages;
-    private final Function<UUID, PacketMemory> memory;
-    private final Map<String, VirtualWorld> named = new LinkedHashMap<>();
+    private final DebugWorlds named;
 
-    public DebugWorldCommand(Basalt basalt, Plugin plugin, MessageSettings messages, Function<UUID, PacketMemory> memory) {
+    public DebugWorldCommand(Basalt basalt, Plugin plugin, MessageSettings messages, DebugWorlds named) {
         this.basalt = basalt;
         this.plugin = plugin;
         this.server = plugin.getServer();
         this.messages = messages;
-        this.memory = memory;
+        this.named = named;
     }
 
+    @Override
     public LiteralArgumentBuilder<CommandSourceStack> branch() {
         return Commands.literal("world")
                 .then(Commands.literal("create").then(Commands.argument(NAME, StringArgumentType.word()).then(corners())))
@@ -187,7 +183,7 @@ public final class DebugWorldCommand {
             return reply(sender, MessageKey.DEBUG_WORLD_UNKNOWN, Placeholder.unparsed(WORLD, name));
         }
         List<String> viewers = world.get().viewers().stream().map(Player::getName).sorted().toList();
-        PacketMemory packets = memory.apply(world.get().id());
+        PacketMemory packets = named.memory(world.get());
         sender.sendMessage(messages.render(MessageKey.DEBUG_WORLD_INFO, Placeholder.unparsed(WORLD, name),
                 Placeholder.unparsed("packets", Integer.toString(packets.packets())),
                 Placeholder.unparsed("bytes", Long.toString(packets.bytes())),
@@ -200,17 +196,11 @@ public final class DebugWorldCommand {
     }
 
     private Optional<VirtualWorld> live(String name) {
-        VirtualWorld world = named.get(name);
-        if (world != null && world.isClosed()) {
-            named.remove(name);
-            return Optional.empty();
-        }
-        return Optional.ofNullable(world);
+        return named.live(name);
     }
 
     private String nameOf(VirtualWorld world) {
-        return named.entrySet().stream().filter(entry -> entry.getValue().id().equals(world.id()))
-                .map(Map.Entry::getKey).findFirst().orElse(world.id().toString());
+        return named.nameOf(world);
     }
 
     private Player onlinePlayer(CommandContext<CommandSourceStack> context) {

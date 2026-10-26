@@ -49,7 +49,7 @@ class EntityMaskSettingsParserTest {
                 InteractionSettingsParser.ENTITY_REACH_MARGIN, EntitySettingsParser.MAX_PER_WORLD,
                 EntityMaskSettingsParser.SCAN_INTERVAL_TICKS, EntityMaskSettingsParser.MAX_ENTITIES_PER_SCAN,
                 WorldSettingsParser.MAX_CHUNKS, WorldSettingsParser.MAX_WORLDS, WorldSettingsParser.MAX_CHUNK_SENDS_PER_TICK,
-                WorldSettingsParser.ENCODER_THREADS),
+                WorldSettingsParser.ENCODER_THREADS, BlueprintSettingsParser.MAX_BLOCKS, BlueprintSettingsParser.MAX_FILE_BYTES),
                 List.copyOf(ShippedConfig.entries().keySet()));
     }
 

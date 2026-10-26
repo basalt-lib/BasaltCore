@@ -12,3 +12,6 @@ world:
   max-worlds: 64
   max-chunk-sends-per-tick: 16
   encoder-threads: 2
+blueprint:
+  max-blocks: 1000000
+  max-file-bytes: 33554432

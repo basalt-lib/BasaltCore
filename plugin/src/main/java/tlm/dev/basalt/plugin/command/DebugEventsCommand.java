@@ -13,7 +13,7 @@ import org.bukkit.entity.Player;
 import tlm.dev.basalt.plugin.config.MessageKey;
 import tlm.dev.basalt.plugin.config.MessageSettings;
 
-public final class DebugEventsCommand {
+public final class DebugEventsCommand implements DebugBranch {
 
     private static final String PLAYER = "player";
     private static final String OFF = "off";
@@ -28,6 +28,7 @@ public final class DebugEventsCommand {
         this.messages = messages;
     }
 
+    @Override
     public LiteralArgumentBuilder<CommandSourceStack> branch() {
         RequiredArgumentBuilder<CommandSourceStack, String> player = Commands.argument(PLAYER, StringArgumentType.word());
         for (DebugEventMode mode : DebugEventMode.values()) {

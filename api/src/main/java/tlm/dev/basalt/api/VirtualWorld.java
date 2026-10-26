@@ -128,6 +128,22 @@ public interface VirtualWorld {
     @NotNull @Unmodifiable Set<Player> viewers();
 
     /**
+     * Places a blueprint in this world with its minimum corner at a block position, and sends the changed chunks to the
+     * viewers within the per tick budget of the BasaltCore config. It replaces the whole volume, air included, except its
+     * voids, which keep what the world holds there. Blocks that have block entities in the real game are placed as block
+     * states only. No rotation and no mirror.
+     *
+     * @param blueprint a blueprint from {@link Basalt}
+     * @param x the x of the minimum corner
+     * @param y the y of the minimum corner
+     * @param z the z of the minimum corner
+     * @throws IllegalArgumentException if the blueprint does not fit in the area and the height of the real world, or
+     *                                  does not come from {@link Basalt}
+     * @throws IllegalStateException if the world is closed
+     */
+    void place(@NotNull Blueprint blueprint, int x, int y, int z);
+
+    /**
      * Creates an entity in this world. It appears to every viewer at the next tick, with the state it has then,
      * so it can be set up first without extra packets. It starts with 20 health out of 20, no name, and is not silent.
      *

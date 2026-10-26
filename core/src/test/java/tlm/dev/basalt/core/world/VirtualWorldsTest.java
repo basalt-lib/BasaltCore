@@ -298,6 +298,25 @@ class VirtualWorldsTest {
     }
 
     @Test
+    void closingAgainFromAnExitLetsEveryViewerLeaveOnce() {
+        UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
+        worlds.addViewer(world, A);
+        worlds.addViewer(world, B);
+        viewers.events.clear();
+        List<Boolean> closedAgain = new ArrayList<>();
+        viewers.exitPath = player -> {
+            worlds.worldOf(player).ifPresent(viewed -> worlds.viewerLeft(viewed, player));
+            closedAgain.add(worlds.close(world));
+        };
+
+        assertTrue(worlds.close(world));
+
+        assertEquals(List.of(false, false), closedAgain);
+        assertEquals(List.of("exit A closed", "exit B closed", "emptied", "closed"), sorted(viewers.events));
+        assertEquals(List.of(), worlds.open());
+    }
+
+    @Test
     void writesSectionsOfSeveralChunksInOnePassThenSendsTheChangedChunks() {
         UUID world = created(worlds.create(TWO_BY_TWO, HostRule.AIR_ONLY, OWNER));
         worlds.addViewer(world, A);

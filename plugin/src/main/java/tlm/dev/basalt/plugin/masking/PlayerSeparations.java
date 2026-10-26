@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 public final class PlayerSeparations implements ViewChanges, WorldListener, Lifecycle {
 
@@ -37,7 +38,7 @@ public final class PlayerSeparations implements ViewChanges, WorldListener, Life
 
     @Override
     public void entered(UUID player, UUID world, ChunkRange area) {
-        refresh(player);
+        refresh(player, UnaryOperator.identity());
     }
 
     @Override
@@ -45,17 +46,18 @@ public final class PlayerSeparations implements ViewChanges, WorldListener, Life
         if (cause.playerLeaves()) {
             forget(player);
         } else {
-            refresh(player);
+            refresh(player, plan -> plan.after(cause));
         }
     }
 
     @Override
     public void policyChanged(UUID world) {
-        worlds.get().snapshot(world).map(WorldSnapshot::viewers).orElse(Set.of()).forEach(this::refresh);
+        worlds.get().snapshot(world).map(WorldSnapshot::viewers).orElse(Set.of())
+                .forEach(viewer -> refresh(viewer, UnaryOperator.identity()));
     }
 
     public void joined(UUID player) {
-        refresh(player);
+        refresh(player, UnaryOperator.identity());
     }
 
     public void forget(UUID player) {
@@ -81,7 +83,7 @@ public final class PlayerSeparations implements ViewChanges, WorldListener, Life
                 + stillApart + " still apart");
     }
 
-    private void refresh(UUID id) {
+    private void refresh(UUID id, UnaryOperator<SeparationPlan> adjust) {
         Player player = plugin.getServer().getPlayer(id);
         if (player == null) {
             return;
@@ -90,7 +92,7 @@ public final class PlayerSeparations implements ViewChanges, WorldListener, Life
         for (Player other : plugin.getServer().getOnlinePlayers()) {
             others.put(other.getUniqueId(), groupOf(other.getUniqueId()));
         }
-        SeparationPlan plan = PlayerSeparation.plan(id, groupOf(id), others, hidden.getOrDefault(id, Set.of()));
+        SeparationPlan plan = adjust.apply(PlayerSeparation.plan(id, groupOf(id), others, hidden.getOrDefault(id, Set.of())));
         for (UUID other : plan.hide()) {
             Player otherOnline = plugin.getServer().getPlayer(other);
             if (otherOnline != null) {

@@ -13,4 +13,8 @@ public record SeparationPlan(List<UUID> hide, List<UUID> show) {
     public boolean isEmpty() {
         return hide.isEmpty() && show.isEmpty();
     }
+
+    public SeparationPlan after(ExitCause cause) {
+        return cause.everyViewerLeaves() ? new SeparationPlan(List.of(), show) : this;
+    }
 }

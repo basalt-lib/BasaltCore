@@ -111,6 +111,19 @@ class PlayerSeparationTest {
         assertEquals(List.of(D), plan.show());
     }
 
+    @Test
+    void startsNoSeparationWhileTheWholeWorldIsLeaving() {
+        Map<UUID, PlayerGroup> others = new LinkedHashMap<>();
+        others.put(B, PlayerGroup.of(FIRST_WORLD, false));
+        others.put(D, PlayerGroup.outside());
+        SeparationPlan plan = PlayerSeparation.plan(A, PlayerGroup.outside(), others, Set.of(D));
+
+        assertEquals(new SeparationPlan(List.of(), List.of(D)), plan.after(ExitCause.SHUTDOWN));
+        assertEquals(new SeparationPlan(List.of(), List.of(D)), plan.after(ExitCause.WORLD_CLOSED));
+        assertEquals(plan, plan.after(ExitCause.COMMAND));
+        assertEquals(plan, plan.after(ExitCause.WORLD_CHANGE));
+    }
+
     private static String matrix(PlayerGroup a, PlayerGroup b, PlayerGroup c, PlayerGroup d) {
         Map<String, PlayerGroup> players = new LinkedHashMap<>();
         players.put("A", a);

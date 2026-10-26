@@ -35,9 +35,10 @@ class MessagesFileTest {
     }
 
     @Test
-    void namesThePlayerTheWorldOrTheBlueprintInEveryTemplate() throws IOException {
-        entries().forEach((key, template) -> assertTrue(template.contains("<player>") || template.contains("<world>") || template.contains("<blueprint>"),
-                key + " names neither the player, the world nor the blueprint"));
+    void namesThePlayerTheWorldsOrTheBlueprintInEveryTemplate() throws IOException {
+        entries().forEach((key, template) -> assertTrue(template.contains("<player>") || template.contains("<world>")
+                        || template.contains("<worlds>") || template.contains("<blueprint>"),
+                key + " names neither the player, the worlds nor the blueprint"));
     }
 
     private Map<String, String> entries() throws IOException {

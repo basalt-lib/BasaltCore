@@ -27,6 +27,7 @@ import tlm.dev.basalt.core.visibility.PacketMemory;
 import tlm.dev.basalt.plugin.config.MessageKey;
 import tlm.dev.basalt.plugin.config.MessageSettings;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -38,6 +39,7 @@ public final class DebugWorldCommand implements DebugBranch {
     private static final String NAME = "name";
     private static final String PLAYER = "player";
     private static final String WORLD = "world";
+    private static final String OWNER = "owner";
     private static final Pattern VALID_NAME = Pattern.compile("[a-z0-9_-]{1,32}");
     private static final List<String> CORNERS = List.of("cx1", "cz1", "cx2", "cz2");
 
@@ -63,6 +65,9 @@ public final class DebugWorldCommand implements DebugBranch {
                         .then(Commands.argument(PLAYER, StringArgumentType.word()).executes(this::add))))
                 .then(Commands.literal("remove").then(Commands.argument(PLAYER, StringArgumentType.word()).executes(this::remove)))
                 .then(Commands.literal("close").then(Commands.argument(NAME, StringArgumentType.word()).executes(this::close)))
+                .then(Commands.literal("list").executes(context -> list(context, Optional.empty()))
+                        .then(Commands.argument(OWNER, StringArgumentType.word()).suggests(this::suggestOwners)
+                                .executes(context -> list(context, Optional.of(StringArgumentType.getString(context, OWNER))))))
                 .then(Commands.literal("info").then(Commands.argument(NAME, StringArgumentType.word())
                         .suggests(this::suggestWorlds).executes(this::info)))
                 .then(Commands.literal("visibility").then(visibilities(Commands.argument(NAME, StringArgumentType.word()))));
@@ -196,6 +201,17 @@ public final class DebugWorldCommand implements DebugBranch {
         };
     }
 
+    private int list(CommandContext<CommandSourceStack> context, Optional<String> owner) {
+        CommandSender sender = context.getSource().getSender();
+        List<VirtualWorld> listed = basalt.worlds().stream()
+                .filter(world -> WorldQuery.ownedBy(world.owner().getName(), owner))
+                .sorted(Comparator.comparing((VirtualWorld world) -> world.owner().getName()).thenComparing(world -> world.id().toString()))
+                .toList();
+        sender.sendMessage(messages.render(MessageKey.DEBUG_WORLD_LIST, Placeholder.unparsed("worlds", Integer.toString(listed.size()))));
+        listed.forEach(world -> sender.sendMessage(messages.render(MessageKey.DEBUG_WORLD_LIST_ENTRY, describe(world))));
+        return Command.SINGLE_SUCCESS;
+    }
+
     private TagResolver describe(VirtualWorld world) {
         List<String> viewers = world.viewers().stream().map(Player::getName).sorted().toList();
         PacketMemory packets = named.memory(world);
@@ -209,6 +225,13 @@ public final class DebugWorldCommand implements DebugBranch {
                 Placeholder.unparsed("visibility", label(world.playerVisibility())),
                 Placeholder.unparsed("owner", world.owner().getName()),
                 Placeholder.unparsed("real", world.area().world().getName()));
+    }
+
+    private CompletableFuture<Suggestions> suggestOwners(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {
+        String typed = builder.getRemainingLowerCase();
+        basalt.worlds().stream().map(world -> world.owner().getName()).distinct()
+                .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(typed)).sorted().forEach(builder::suggest);
+        return builder.buildFuture();
     }
 
     private CompletableFuture<Suggestions> suggestWorlds(CommandContext<CommandSourceStack> context, SuggestionsBuilder builder) {

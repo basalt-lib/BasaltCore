@@ -7,6 +7,9 @@ import tlm.dev.basalt.api.VirtualWorld;
 
 /**
  * An event about a virtual world. Every Basalt event is called on the main server thread.
+ * <p>
+ * Every plugin that listens to an event gets it, whoever owns the world: a handler that should only act on its own
+ * worlds compares {@code world().owner()} with its plugin first.
  */
 @ApiStatus.Experimental
 public abstract class VirtualWorldEvent extends Event {

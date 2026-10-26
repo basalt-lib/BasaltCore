@@ -120,17 +120,20 @@ public final class DebugWorldCommand implements DebugBranch {
         World world = SourceWorld.of(context.getSource());
         ChunkArea area = new ChunkArea(world, Math.min(x1, x2), Math.min(z1, z2), Math.max(x1, x2), Math.max(z1, z2));
         VirtualWorld created;
+        long start = System.nanoTime();
         try {
             created = basalt.createWorld(plugin, area);
         } catch (HostAreaException | IllegalArgumentException | IllegalStateException refused) {
             return reply(sender, MessageKey.DEBUG_WORLD_REFUSED, Placeholder.unparsed(WORLD, name),
                     Placeholder.unparsed("reason", String.valueOf(refused.getMessage())));
         }
+        double millis = (System.nanoTime() - start) / 1_000_000.0;
         pattern.ifPresent(painted -> DebugPainter.paint(created, server, painted));
         named.put(name, created);
         sender.sendMessage(messages.render(MessageKey.DEBUG_WORLD_CREATED, Placeholder.unparsed(WORLD, name), area(area),
                 Placeholder.unparsed("pattern", pattern.map(DebugPattern::label).orElse("empty")),
-                Placeholder.unparsed("real", world.getName())));
+                Placeholder.unparsed("real", world.getName()),
+                Placeholder.unparsed("millis", String.format(Locale.ROOT, "%.2f", millis))));
         return Command.SINGLE_SUCCESS;
     }
 

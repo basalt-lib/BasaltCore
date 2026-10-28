@@ -1,7 +1,7 @@
 subprojects {
     apply(plugin = "java-library")
 
-    group = "tlm.dev.basalt"
+    group = "io.github.basalt-lib"
     version = "0.1.0-SNAPSHOT"
 
     repositories {

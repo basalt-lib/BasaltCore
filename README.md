@@ -54,7 +54,7 @@ Plugin jar: `plugin/build/libs/BasaltCore-0.1.0-SNAPSHOT.jar`.
 
 ```kotlin
 repositories { mavenLocal() }
-dependencies { compileOnly("tlm.dev.basalt:basalt-api:0.1.0-SNAPSHOT") }
+dependencies { compileOnly("io.github.basalt-lib:basalt-api:0.1.0-SNAPSHOT") }
 ```
 
 `paper-plugin.yml`:

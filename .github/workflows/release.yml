@@ -1,0 +1,174 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Build the Maven repository in a work folder, check it and keep it as an artifact, push nothing
+        type: boolean
+        required: true
+        default: true
+      version:
+        description: Version to rehearse, like 0.1.0
+        type: string
+        required: true
+        default: 0.1.0
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  MAVEN_PATH: io/github/basalt-lib/basalt-api
+  MAVEN_URL: https://basalt-lib.github.io/BasaltCore/maven
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - id: version
+        env:
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ github.ref_name }}
+          DRY_RUN: ${{ inputs.dry-run }}
+          REHEARSED: ${{ inputs.version }}
+        run: |
+          if [ "$EVENT" = push ]; then
+            tag="$TAG"
+          elif [ "$DRY_RUN" = true ]; then
+            tag="v$REHEARSED"
+          else
+            echo "::error::A release is published from a pushed v tag only, run this workflow by hand with dry-run"
+            exit 1
+          fi
+          if ! [[ "$tag" =~ ^v[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
+            echo "::error::$tag does not match vMAJOR.MINOR.PATCH"
+            exit 1
+          fi
+          echo "version=${tag:1}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+      - run: ./gradlew build -PreleaseVersion=${{ steps.version.outputs.version }}
+
+  dry-run:
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+      - run: |
+          if [ -e "gh-pages/maven/$MAVEN_PATH/$VERSION" ]; then
+            echo "::error::basalt-api $VERSION is already published"
+            exit 1
+          fi
+      - run: ./gradlew :api:publishBasaltApiPublicationToReleaseRepository :api:checkReleaseRepository -PreleaseVersion="$VERSION" -PreleaseRepository="$GITHUB_WORKSPACE/gh-pages/maven"
+      - run: git -C gh-pages status --short
+      - uses: actions/upload-artifact@v7
+        with:
+          name: maven-repository-dry-run
+          path: gh-pages/maven
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.repository == 'basalt-lib/BasaltCore'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: release
+      url: https://basalt-lib.github.io/BasaltCore/maven
+    permissions:
+      contents: write
+      pages: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          ref: gh-pages
+          path: gh-pages
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+      - run: |
+          if [ -e "gh-pages/maven/$MAVEN_PATH/$VERSION" ]; then
+            echo "::error::basalt-api $VERSION is already published"
+            exit 1
+          fi
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "::error::the release v$VERSION already exists"
+            exit 1
+          fi
+      - run: ./gradlew :plugin:jar :api:publishBasaltApiPublicationToReleaseRepository :api:checkReleaseRepository -PreleaseVersion="$VERSION" -PreleaseRepository="$GITHUB_WORKSPACE/gh-pages/maven"
+      - run: |
+          git -C gh-pages config user.name "github-actions[bot]"
+          git -C gh-pages config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C gh-pages add maven
+          git -C gh-pages commit -m "chore: publish basalt-api $VERSION"
+          git -C gh-pages push origin gh-pages
+          gh api -X POST "repos/$GITHUB_REPOSITORY/pages/builds"
+      - run: |
+          mkdir release
+          cp "plugin/build/libs/BasaltCore-$VERSION.jar" api/build/libs/basalt-api-"$VERSION".jar api/build/libs/basalt-api-"$VERSION"-sources.jar api/build/libs/basalt-api-"$VERSION"-javadoc.jar release/
+          (cd release && for jar in *.jar; do sha256sum "$jar" > "$jar.sha256"; done)
+          first=""
+          if [ "$VERSION" = 0.1.0 ]; then
+            first="First release. "
+          fi
+          printf '%s\n' \
+            "${first}The API is experimental (\`@ApiStatus.Experimental\`) and may change before 1.0." \
+            "" \
+            "- Paper 1.21.11, Java 21+" \
+            "- Plugin: \`BasaltCore-$VERSION.jar\` in \`plugins/\`" \
+            "- API: \`io.github.basalt-lib:basalt-api:$VERSION\` from the Maven repository $MAVEN_URL" \
+            > notes.md
+          gh release create "v$VERSION" release/* --title "Basalt $VERSION" --notes-file notes.md --verify-tag
+      - run: |
+          for attempt in $(seq 1 40); do
+            if curl -fsS "$MAVEN_URL/$MAVEN_PATH/maven-metadata.xml" | grep -q "<version>$VERSION</version>"; then
+              echo "$MAVEN_URL serves basalt-api $VERSION"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::$MAVEN_URL does not serve basalt-api $VERSION after 10 minutes"
+          exit 1

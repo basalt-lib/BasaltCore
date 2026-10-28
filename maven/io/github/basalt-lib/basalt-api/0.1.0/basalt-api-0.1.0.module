@@ -1,0 +1,100 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "io.github.basalt-lib",
+    "module": "basalt-api",
+    "version": "0.1.0",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "9.8.2"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "basalt-api-0.1.0.jar",
+          "url": "basalt-api-0.1.0.jar",
+          "size": 19674,
+          "sha512": "02f9cf03ba261fa6a62b64db8e1631e9e030c9f07da8532b724b93a9499bdb4e85f32883e565fbf704435332eaf1ee1b6ab9754647e64e64372bf648a377da81",
+          "sha256": "803956b01bca9fad917a0924ba1239bf2af06cb0d70774f8570d60212f17963c",
+          "sha1": "bca21d68c13334fb28c1334e177aae65c5122c21",
+          "md5": "68f7d37ea6e98e85d881f95ae6ba75f2"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 21,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "basalt-api-0.1.0.jar",
+          "url": "basalt-api-0.1.0.jar",
+          "size": 19674,
+          "sha512": "02f9cf03ba261fa6a62b64db8e1631e9e030c9f07da8532b724b93a9499bdb4e85f32883e565fbf704435332eaf1ee1b6ab9754647e64e64372bf648a377da81",
+          "sha256": "803956b01bca9fad917a0924ba1239bf2af06cb0d70774f8570d60212f17963c",
+          "sha1": "bca21d68c13334fb28c1334e177aae65c5122c21",
+          "md5": "68f7d37ea6e98e85d881f95ae6ba75f2"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "basalt-api-0.1.0-sources.jar",
+          "url": "basalt-api-0.1.0-sources.jar",
+          "size": 20989,
+          "sha512": "370c884fb2c2392bf5dbe7c67a6d78da8c9310df2b9d61fdaf9095aba71f26b33b9975dcf9a49921ee1dbd5e78a95750ff6173050e401fecd321b76676fb36b0",
+          "sha256": "1d38f112a7860cfd8351ff4269eef971c747c4a1692b33ee3eebeece913ff7e0",
+          "sha1": "91edc608ee0f0464574521c120a3481759c20223",
+          "md5": "a70c4aaefaffde36eee72824865f2431"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "basalt-api-0.1.0-javadoc.jar",
+          "url": "basalt-api-0.1.0-javadoc.jar",
+          "size": 4234761,
+          "sha512": "f38707c8c9981bc5322be5c33e605c7b2023f07f7077e0e47d667a76be8f9499fe4a7c91a150f6512caa7e12958a44e3dd16f8825a7c7fc548b0428b6fa7dfee",
+          "sha256": "53ad6114b25e2b22ef2fb6204a652b0ca5a14065316214d26017bfae42e2ecea",
+          "sha1": "d1b1dd88511cf99b972f58c51be58c4e60dd2355",
+          "md5": "2fd32d9b53711aa66ecedf3032a2dd2e"
+        }
+      ]
+    }
+  ]
+}

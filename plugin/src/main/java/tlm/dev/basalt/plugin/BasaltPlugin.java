@@ -16,9 +16,13 @@ import tlm.dev.basalt.core.interaction.InteractionReplies;
 import tlm.dev.basalt.core.interaction.InteractionService;
 import tlm.dev.basalt.core.interaction.InteractionSettings;
 import tlm.dev.basalt.core.interaction.InteractionTools;
+import tlm.dev.basalt.core.interaction.InteractionWorld;
 import tlm.dev.basalt.core.platform.GameVersion;
 import tlm.dev.basalt.core.platform.SupportedVersion;
+import tlm.dev.basalt.core.overlay.OverlaySettings;
+import tlm.dev.basalt.core.overlay.OverlayTools;
 import tlm.dev.basalt.core.overlay.OverlayViews;
+import tlm.dev.basalt.core.overlay.Overlays;
 import tlm.dev.basalt.core.visibility.ChunkViews;
 import tlm.dev.basalt.core.visibility.EntityMaskSettings;
 import tlm.dev.basalt.core.visibility.EntityMasking;
@@ -37,6 +41,7 @@ import tlm.dev.basalt.nms.MojangWorlds;
 import tlm.dev.basalt.nms.platform.MojangBlockStates;
 import tlm.dev.basalt.nms.platform.MojangGameVersionSource;
 import tlm.dev.basalt.nms.platform.MojangLook;
+import tlm.dev.basalt.nms.platform.MojangLooks;
 import tlm.dev.basalt.nms.port.MojangVersion;
 import tlm.dev.basalt.nms.port.ViewInputs;
 import tlm.dev.basalt.nms.port.WorldSource;
@@ -57,6 +62,7 @@ import tlm.dev.basalt.plugin.config.EntitySettingsParser;
 import tlm.dev.basalt.plugin.config.InteractionSettingsParser;
 import tlm.dev.basalt.plugin.config.MessageFiles;
 import tlm.dev.basalt.plugin.config.MessageSettings;
+import tlm.dev.basalt.plugin.config.OverlaySettingsParser;
 import tlm.dev.basalt.plugin.config.WorldSettingsParser;
 import tlm.dev.basalt.plugin.config.YamlFiles;
 import tlm.dev.basalt.plugin.entity.BukkitEntityEvents;
@@ -67,10 +73,14 @@ import tlm.dev.basalt.plugin.facade.BasaltFacade;
 import tlm.dev.basalt.plugin.facade.ContentTools;
 import tlm.dev.basalt.plugin.facade.FacadeTools;
 import tlm.dev.basalt.plugin.facade.ServiceRegistration;
+import tlm.dev.basalt.plugin.facade.SessionTools;
 import tlm.dev.basalt.plugin.interaction.BukkitInteractionEvents;
+import tlm.dev.basalt.plugin.interaction.BukkitOverlayEvents;
 import tlm.dev.basalt.plugin.interaction.InteractionQueues;
 import tlm.dev.basalt.plugin.interaction.InteractionSessions;
 import tlm.dev.basalt.plugin.interaction.InteractionTicker;
+import tlm.dev.basalt.plugin.interaction.OverlayBlocks;
+import tlm.dev.basalt.plugin.interaction.OverlayEntityTargets;
 import tlm.dev.basalt.plugin.interaction.ViewBlocks;
 import tlm.dev.basalt.plugin.interaction.ViewEntities;
 import tlm.dev.basalt.plugin.lifecycle.LifecycleManager;
@@ -85,6 +95,10 @@ import tlm.dev.basalt.plugin.masking.MaskedViewers;
 import tlm.dev.basalt.plugin.masking.PlayerSeparations;
 import tlm.dev.basalt.plugin.masking.SeparationJoinListener;
 import tlm.dev.basalt.plugin.masking.SeparationQuitListener;
+import tlm.dev.basalt.plugin.overlay.OverlayOwnerListener;
+import tlm.dev.basalt.plugin.overlay.OverlayQuitListener;
+import tlm.dev.basalt.plugin.overlay.OverlaySessions;
+import tlm.dev.basalt.plugin.overlay.OverlayWorldListener;
 import tlm.dev.basalt.plugin.world.ChunkEncoders;
 import tlm.dev.basalt.plugin.world.OwnerListener;
 import tlm.dev.basalt.plugin.world.ViewSender;
@@ -130,6 +144,7 @@ public final class BasaltPlugin extends JavaPlugin {
         EntitySettings entitySettings = EntitySettingsParser.parse(reader);
         WorldSettings worldSettings = WorldSettingsParser.parse(reader);
         PlanSettings planSettings = BlueprintSettingsParser.parse(reader);
+        OverlaySettings overlaySettings = OverlaySettingsParser.parse(reader);
         InteractionQueues queues = new InteractionQueues(settings.maxActionsPerSecond());
         MaskedViewers masks = new MaskedViewers(this, new EntityMasking(maskSettings.maxEntitiesPerScan()));
         AtomicReference<ChunkViews> viewsOnceCreated = new AtomicReference<>();
@@ -150,6 +165,8 @@ public final class BasaltPlugin extends JavaPlugin {
         worldsOnceCreated.set(worlds);
         OverlayViews<MojangLook> overlayViews = new OverlayViews<>();
         InteractionQueues overlayQueues = new InteractionQueues(settings.maxActionsPerSecond());
+        Overlays<MojangLook> overlays = new Overlays<>(new OverlayTools<>(MojangOverlays.display(getServer()), overlayViews,
+                UUID::randomUUID, version.entityIds(getServer())), overlaySettings);
         ChunkViews views = MojangChunkViews.create(getServer(), version, new ViewInputs(queues,
                 ViewChanges.both(masks, ViewChanges.both(entityExits, ViewChanges.both(worldExits, ViewChanges.both(separations,
                         new ViewerEvents(basaltOnceCreated::get, getServer()))))), new WorldSource(worlds, chunks, encoders),
@@ -157,10 +174,15 @@ public final class BasaltPlugin extends JavaPlugin {
         viewsOnceCreated.set(views);
         MojangBlockStates blockStates = new MojangBlockStates();
         PlanService plans = new PlanService(MojangBlueprints.names(), MojangBlueprints.realBlocks(getServer()), planSettings);
-        BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion(), new FacadeTools(getServer(), worlds, entities, new ContentTools(blockStates, shapes, plans)));
+        BasaltFacade basalt = new BasaltFacade(getPluginMeta().getVersion(), new FacadeTools(getServer(),
+                new SessionTools(worlds, entities, overlays), new ContentTools(blockStates, shapes, plans, new MojangLooks())));
         basaltOnceCreated.set(basalt);
-        InteractionService interactions = new InteractionService(new InteractionTools(MojangInteractions.world(getServer()),
+        InteractionWorld interactionWorld = MojangInteractions.world(getServer());
+        InteractionService interactions = new InteractionService(new InteractionTools(interactionWorld,
                 new ViewBlocks(worlds), new ViewEntities(entities, shapes), replies), new BukkitInteractionEvents(basalt, getServer(), blockStates), settings);
+        InteractionService overlayInteractions = new InteractionService(new InteractionTools(interactionWorld,
+                new OverlayBlocks(overlays, interactionWorld.air()), new OverlayEntityTargets(overlays, shapes), MojangOverlays.replies(getServer(), overlayViews)),
+                new BukkitOverlayEvents(basalt, getServer(), blockStates), settings);
         FlyingKickListener flyingKicks = new FlyingKickListener(views, getLogger());
         lifecycle = new LifecycleManager(List.of(
                 new ServiceRegistration(getServer().getServicesManager(), this, basalt),
@@ -168,16 +190,22 @@ public final class BasaltPlugin extends JavaPlugin {
                 new WorldSessions(worlds, entities::held, getLogger()),
                 separations,
                 new ViewSessions(views, getServer(), getLogger()),
+                new OverlaySessions(overlays, getLogger()),
                 flyingKicks,
                 new ViewSender(this, views, WorldSettingsParser.chunkSendsPerTick(reader)),
                 new EntityTicker(this, entities),
                 new InteractionTicker(this, queues, interactions),
+                new InteractionTicker(this, overlayQueues, overlayInteractions),
                 new EntityScanner(this, masks, maskSettings.scanIntervalTicks())), getLogger());
         lifecycle.enable();
         registerListeners(views);
         PluginManager plugins = getServer().getPluginManager();
         plugins.registerEvents(flyingKicks, this);
         plugins.registerEvents(new InteractionSessions(queues, interactions), this);
+        plugins.registerEvents(new InteractionSessions(overlayQueues, overlayInteractions), this);
+        plugins.registerEvents(new OverlayQuitListener(overlays), this);
+        plugins.registerEvents(new OverlayWorldListener(overlays), this);
+        plugins.registerEvents(new OverlayOwnerListener(this, overlays), this);
         plugins.registerEvents(new EntityTrackListener(masks), this);
         plugins.registerEvents(new OwnerListener(this, worlds), this);
         plugins.registerEvents(new SeparationJoinListener(separations), this);

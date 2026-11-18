@@ -9,6 +9,7 @@
 - Virtual blocks and entities, shared by the viewers of a world
 - Events: break, place, use and damage (cancellable), entity death, viewer add and remove
 - Blueprints: capture a real area, load a vanilla `.nbt` structure or a Sponge `.schem`
+- Overlays: sparse virtual blocks and entities over a real world, per player or group, the real chunks, light and entities untouched
 - Packets only: no extra world, no server fork, no client mod
 
 ## Showcase
@@ -88,6 +89,9 @@ dependencies:
 | `world.encoder-threads` | `2` | Threads encoding chunk packets |
 | `blueprint.max-blocks` | `1000000` | Blueprint volume, air included |
 | `blueprint.max-file-bytes` | `33554432` | Blueprint file size once decompressed |
+| `overlay.max-overlays` | `1024` | Open overlays |
+| `overlay.max-blocks` | `4096` | Blocks per overlay |
+| `overlay.max-entities` | `256` | Entities per overlay |
 
 </details>
 
@@ -111,6 +115,7 @@ dependencies:
 - Blueprints: no rotation or mirror, block states only (no entities, no block entity data)
 - Virtual chunks: full sky light, no block light, plains biome
 - The real area must be air, `createWorld` checks it
+- Overlays: no placement, a break only removes the overlay block, the light stays the real one, the server does not collide with overlay blocks
 - Bukkit events don't fire for virtual actions, use `Virtual*Event`
 - Paper 1.21.11 and 26.2 only, no Folia: on another version BasaltCore disables itself
 

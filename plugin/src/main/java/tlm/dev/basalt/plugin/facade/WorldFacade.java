@@ -105,6 +105,9 @@ final class WorldFacade implements VirtualWorld {
             throw new IllegalStateException(player.getName() + " is in " + player.getWorld().getName()
                     + ", not in " + area.world().getName());
         }
+        if (tools.overlays().overlayOf(player.getUniqueId()).isPresent()) {
+            throw new IllegalStateException(player.getName() + " already views an overlay");
+        }
         switch (tools.worlds().addViewer(id, player.getUniqueId())) {
             case ADDED -> {
             }

@@ -15,3 +15,7 @@ world:
 blueprint:
   max-blocks: 1000000
   max-file-bytes: 33554432
+overlay:
+  max-overlays: 1024
+  max-blocks: 4096
+  max-entities: 256

@@ -70,6 +70,37 @@ public interface Basalt {
     @Nullable VirtualWorld worldOf(@NotNull Player player);
 
     /**
+     * Creates an empty overlay on an area of a real world, with no viewer. Nothing is loaded or checked: the real world
+     * stays as it is under the overlay, and the area may be of any size.
+     * <p>
+     * The overlay belongs to its owner: Basalt closes it when the owner is disabled, before the owner's own
+     * {@code onDisable} runs. An overlay never closes because it has no viewer: it lives until {@link Overlay#close()},
+     * the disabling of its owner or the stop of BasaltCore.
+     *
+     * @param owner the enabled plugin the overlay belongs to
+     * @param area the area of the real world
+     * @return the new overlay
+     * @throws IllegalStateException if the owner is not enabled, if the real world is not loaded,
+     *                               if {@code overlay.max-overlays} overlays are already open, or if called outside the main thread
+     */
+    @NotNull Overlay createOverlay(@NotNull Plugin owner, @NotNull ChunkArea area);
+
+    /**
+     * Returns the open overlays.
+     *
+     * @return a copy of the open overlays, in creation order
+     */
+    @NotNull @Unmodifiable Collection<Overlay> overlays();
+
+    /**
+     * Returns the overlay a player views.
+     *
+     * @param player the player
+     * @return the overlay the player views, or null if none
+     */
+    @Nullable Overlay overlayOf(@NotNull Player player);
+
+    /**
      * Captures the real blocks of a box into a blueprint, block states only. Loads the real chunks it needs.
      * The box covers the blocks from the floor of its minimum corner to the block before the ceiling of its maximum corner,
      * and at least one block on each axis, like {@link VirtualWorld#fill(BoundingBox, org.bukkit.block.data.BlockData)}:

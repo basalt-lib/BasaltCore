@@ -9,6 +9,7 @@ import tlm.dev.basalt.api.Blueprint;
 import tlm.dev.basalt.api.BlueprintException;
 import tlm.dev.basalt.api.ChunkArea;
 import tlm.dev.basalt.api.HostAreaException;
+import tlm.dev.basalt.api.Overlay;
 import tlm.dev.basalt.api.VirtualWorld;
 import tlm.dev.basalt.core.blueprint.PlanException;
 import tlm.dev.basalt.core.position.BlockBox;
@@ -27,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 public final class BasaltFacade implements Basalt {
@@ -34,6 +36,7 @@ public final class BasaltFacade implements Basalt {
     private final String version;
     private final FacadeTools tools;
     private final Map<UUID, WorldFacade> facades = new LinkedHashMap<>();
+    private final Map<UUID, OverlayFacade> overlays = new LinkedHashMap<>();
 
     public BasaltFacade(String version, FacadeTools tools) {
         this.version = version;
@@ -67,6 +70,44 @@ public final class BasaltFacade implements Basalt {
         tools.checkThread();
         Objects.requireNonNull(player, "player");
         return tools.worlds().worldOf(player.getUniqueId()).map(facades::get).orElse(null);
+    }
+
+    @Override
+    public Overlay createOverlay(Plugin owner, ChunkArea area) {
+        tools.checkThread();
+        Objects.requireNonNull(owner, "owner");
+        Objects.requireNonNull(area, "area");
+        if (!owner.isEnabled()) {
+            throw new IllegalStateException("the owner " + owner.getName() + " is not enabled");
+        }
+        World world = area.world();
+        if (tools.server().getWorld(world.getUID()) == null) {
+            throw new IllegalStateException("world " + world.getName() + " is not loaded");
+        }
+        Optional<UUID> created = tools.overlays().create(owner.getName(), world.getUID(),
+                new ChunkRange(area.minChunkX(), area.minChunkZ(), area.maxChunkX(), area.maxChunkZ()),
+                world.getMinHeight(), world.getMaxHeight() - 1);
+        if (created.isEmpty()) {
+            throw new IllegalStateException("at most " + tools.overlays().settings().maxOverlays()
+                    + " overlays can be open at once (overlay.max-overlays)");
+        }
+        OverlayFacade facade = new OverlayFacade(created.get(), area, owner, tools);
+        overlays.put(created.get(), facade);
+        return facade;
+    }
+
+    @Override
+    public Collection<Overlay> overlays() {
+        tools.checkThread();
+        overlays.keySet().retainAll(tools.overlays().open());
+        return List.copyOf(overlays.values());
+    }
+
+    @Override
+    public Overlay overlayOf(Player player) {
+        tools.checkThread();
+        Objects.requireNonNull(player, "player");
+        return tools.overlays().overlayOf(player.getUniqueId()).map(overlays::get).orElse(null);
     }
 
     @Override

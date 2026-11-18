@@ -24,9 +24,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -35,8 +33,8 @@ public final class BasaltFacade implements Basalt {
 
     private final String version;
     private final FacadeTools tools;
-    private final Map<UUID, WorldFacade> facades = new LinkedHashMap<>();
-    private final Map<UUID, OverlayFacade> overlays = new LinkedHashMap<>();
+    private final OpenFacades<WorldFacade> facades = new OpenFacades<>();
+    private final OpenFacades<OverlayFacade> overlays = new OpenFacades<>();
 
     public BasaltFacade(String version, FacadeTools tools) {
         this.version = version;
@@ -61,15 +59,14 @@ public final class BasaltFacade implements Basalt {
     public Collection<VirtualWorld> worlds() {
         tools.checkThread();
         List<UUID> open = tools.worlds().open();
-        facades.keySet().retainAll(open);
-        return List.copyOf(facades.values());
+        return List.copyOf(facades.all(open));
     }
 
     @Override
     public VirtualWorld worldOf(Player player) {
         tools.checkThread();
         Objects.requireNonNull(player, "player");
-        return tools.worlds().worldOf(player.getUniqueId()).map(facades::get).orElse(null);
+        return tools.worlds().worldOf(player.getUniqueId()).flatMap(facades::find).orElse(null);
     }
 
     @Override
@@ -92,22 +89,21 @@ public final class BasaltFacade implements Basalt {
                     + " overlays can be open at once (overlay.max-overlays)");
         }
         OverlayFacade facade = new OverlayFacade(created.get(), area, owner, tools);
-        overlays.put(created.get(), facade);
+        overlays.add(created.get(), facade, tools.overlays().open());
         return facade;
     }
 
     @Override
     public Collection<Overlay> overlays() {
         tools.checkThread();
-        overlays.keySet().retainAll(tools.overlays().open());
-        return List.copyOf(overlays.values());
+        return List.copyOf(overlays.all(tools.overlays().open()));
     }
 
     @Override
     public Overlay overlayOf(Player player) {
         tools.checkThread();
         Objects.requireNonNull(player, "player");
-        return tools.overlays().overlayOf(player.getUniqueId()).map(overlays::get).orElse(null);
+        return tools.overlays().overlayOf(player.getUniqueId()).flatMap(overlays::find).orElse(null);
     }
 
     @Override
@@ -169,7 +165,7 @@ public final class BasaltFacade implements Basalt {
         return switch (tools.worlds().create(host, rule, owner.getName())) {
             case Creation.Created created -> {
                 WorldFacade facade = new WorldFacade(created.world(), area, owner, tools);
-                facades.put(created.world(), facade);
+                facades.add(created.world(), facade, tools.worlds().open());
                 yield facade;
             }
             case Creation.Refused refused -> throw switch (refused.reason()) {

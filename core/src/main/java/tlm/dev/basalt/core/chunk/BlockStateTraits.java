@@ -4,5 +4,7 @@ public interface BlockStateTraits {
 
     boolean isAir(int state);
 
+    boolean hasFluid(int state);
+
     boolean countsIn(HeightmapType type, int state);
 }

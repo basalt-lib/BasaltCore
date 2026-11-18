@@ -1,6 +1,6 @@
 package tlm.dev.basalt.core.chunk;
 
-public record ChunkSection(PalettedValues states, PalettedValues biomes, int nonAirCount) {
+public record ChunkSection(PalettedValues states, PalettedValues biomes, int nonAirCount, int fluidCount) {
 
     public ChunkSection {
         if (states.format().entryCount() != ContainerFormat.SECTION_BLOCKS) {
@@ -11,6 +11,9 @@ public record ChunkSection(PalettedValues states, PalettedValues biomes, int non
         }
         if (nonAirCount < 0 || nonAirCount > ContainerFormat.SECTION_BLOCKS) {
             throw new IllegalArgumentException("non-air count out of range: " + nonAirCount);
+        }
+        if (fluidCount < 0 || fluidCount > nonAirCount) {
+            throw new IllegalArgumentException("fluid count " + fluidCount + " outside 0.." + nonAirCount);
         }
     }
 

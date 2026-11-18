@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.IntPredicate;
 
 public final class VirtualChunkBuilder {
 
@@ -51,11 +52,12 @@ public final class VirtualChunkBuilder {
         int[] biomes = new int[ContainerFormat.SECTION_BIOME_CELLS];
         Arrays.fill(biomes, biome);
         PalettedValues biomeValues = PalettedValues.of(biomes, formats.biomes());
-        ChunkSection emptySection = new ChunkSection(PalettedValues.of(airFilled(), formats.blockStates()), biomeValues, 0);
+        ChunkSection emptySection = new ChunkSection(PalettedValues.of(airFilled(), formats.blockStates()), biomeValues, 0, 0);
         List<ChunkSection> built = new ArrayList<>(sections.length);
         for (int[] states : sections) {
             built.add(states == null ? emptySection : new ChunkSection(
-                    PalettedValues.of(states, formats.blockStates()), biomeValues, nonAirCount(states, traits)));
+                    PalettedValues.of(states, formats.blockStates()), biomeValues,
+                    count(states, state -> !traits.isAir(state)), count(states, traits::hasFluid)));
         }
         return new VirtualChunk(key, shape, built, heights(traits));
     }
@@ -89,10 +91,10 @@ public final class VirtualChunkBuilder {
         return 0;
     }
 
-    private static int nonAirCount(int[] states, BlockStateTraits traits) {
+    private static int count(int[] states, IntPredicate counted) {
         int count = 0;
         for (int state : states) {
-            if (!traits.isAir(state)) {
+            if (counted.test(state)) {
                 count++;
             }
         }

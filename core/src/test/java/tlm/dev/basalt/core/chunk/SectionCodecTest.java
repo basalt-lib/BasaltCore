@@ -10,8 +10,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SectionCodecTest {
 
-    private static final ChunkFormats FORMATS = ChunkFormats.of(30000, 70);
+    private static final ChunkFormats FORMATS = ChunkFormats.of(30000, 70, SectionHeader.BLOCK_COUNT);
     private static final SectionCodec CODEC = new SectionCodec(FORMATS);
+    private static final SectionCodec FLUID_CODEC = new SectionCodec(ChunkFormats.of(30000, 70, SectionHeader.BLOCK_AND_FLUID_COUNTS));
     private static final int AIR = 0;
     private static final int PLAINS = 3;
 
@@ -74,12 +75,53 @@ class SectionCodecTest {
             biomes[index] = index % 5;
         }
         ChunkSection section = new ChunkSection(
-                PalettedValues.of(filled(AIR), FORMATS.blockStates()), PalettedValues.of(biomes, FORMATS.biomes()), 0);
+                PalettedValues.of(filled(AIR), FORMATS.blockStates()), PalettedValues.of(biomes, FORMATS.biomes()), 0, 0);
 
         ChunkSection read = roundTrip(section);
 
         assertEquals(3, read.biomes().bits());
         assertArrayEquals(biomes, read.biomes().toArray());
+    }
+
+    @Test
+    void writesTheFluidCountAfterTheBlockCountWhenTheVersionHasIt() {
+        ChunkSection water = new ChunkSection(
+                PalettedValues.of(filled(86), FORMATS.blockStates()), PalettedValues.of(filledBiomes(), FORMATS.biomes()), 4096, 4096);
+        ByteWriter out = new ByteWriter(16);
+        FLUID_CODEC.write(water, out);
+
+        assertArrayEquals(new byte[] {16, 0, 16, 0, 0, 86, 0, PLAINS}, out.toByteArray());
+        assertArrayEquals(new byte[] {16, 0, 0, 86, 0, PLAINS}, encode(water));
+    }
+
+    @Test
+    void readsBackTheFluidCount() {
+        int[] states = filled(AIR);
+        states[ChunkSection.blockIndex(1, 2, 3)] = 86;
+        states[ChunkSection.blockIndex(4, 5, 6)] = 1;
+        ChunkSection section = new ChunkSection(
+                PalettedValues.of(states, FORMATS.blockStates()), PalettedValues.of(filledBiomes(), FORMATS.biomes()), 2, 1);
+        ByteWriter out = new ByteWriter(4096);
+        FLUID_CODEC.write(section, out);
+        ByteReader in = new ByteReader(out.toByteArray());
+
+        ChunkSection read = FLUID_CODEC.read(in);
+
+        assertEquals(0, in.remaining());
+        assertEquals(2, read.nonAirCount());
+        assertEquals(1, read.fluidCount());
+        assertArrayEquals(states, read.states().toArray());
+    }
+
+    @Test
+    void rejectsMoreFluidsThanNonAirBlocks() {
+        ByteWriter out = new ByteWriter(8);
+        out.writeShort(1);
+        out.writeShort(2);
+
+        assertThrows(MalformedChunkDataException.class, () -> FLUID_CODEC.read(new ByteReader(out.toByteArray())));
+        assertThrows(IllegalArgumentException.class, () -> new ChunkSection(
+                PalettedValues.of(filled(AIR), FORMATS.blockStates()), PalettedValues.of(filledBiomes(), FORMATS.biomes()), 0, 1));
     }
 
     @Test
@@ -152,7 +194,7 @@ class SectionCodecTest {
 
     private static ChunkSection section(int[] states, int nonAirCount) {
         return new ChunkSection(
-                PalettedValues.of(states, FORMATS.blockStates()), PalettedValues.of(filledBiomes(), FORMATS.biomes()), nonAirCount);
+                PalettedValues.of(states, FORMATS.blockStates()), PalettedValues.of(filledBiomes(), FORMATS.biomes()), nonAirCount, 0);
     }
 
     private static int[] filled(int state) {

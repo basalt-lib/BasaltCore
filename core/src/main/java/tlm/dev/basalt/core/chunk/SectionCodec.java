@@ -10,6 +10,9 @@ public final class SectionCodec {
 
     public void write(ChunkSection section, ByteWriter out) {
         out.writeShort(section.nonAirCount());
+        if (formats.header() == SectionHeader.BLOCK_AND_FLUID_COUNTS) {
+            out.writeShort(section.fluidCount());
+        }
         writeContainer(section.states(), out);
         writeContainer(section.biomes(), out);
     }
@@ -19,9 +22,13 @@ public final class SectionCodec {
         if (nonAirCount < 0 || nonAirCount > ContainerFormat.SECTION_BLOCKS) {
             throw new MalformedChunkDataException("non-air count out of range: " + nonAirCount);
         }
+        int fluidCount = formats.header() == SectionHeader.BLOCK_AND_FLUID_COUNTS ? in.readShort() : 0;
+        if (fluidCount < 0 || fluidCount > nonAirCount) {
+            throw new MalformedChunkDataException("fluid count " + fluidCount + " outside 0.." + nonAirCount);
+        }
         PalettedValues states = readContainer(in, formats.blockStates());
         PalettedValues biomes = readContainer(in, formats.biomes());
-        return new ChunkSection(states, biomes, nonAirCount);
+        return new ChunkSection(states, biomes, nonAirCount, fluidCount);
     }
 
     private static void writeContainer(PalettedValues values, ByteWriter out) {

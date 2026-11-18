@@ -118,6 +118,7 @@ public final class VirtualChunk {
     private static ChunkSection writeSection(ChunkSection section, SectionWrite write, BlockStateTraits traits) {
         int[] states = null;
         int nonAir = section.nonAirCount();
+        int fluids = section.fluidCount();
         for (int index = 0; index < SectionWrite.BLOCKS; index++) {
             int state = write.stateAt(index);
             if (state == SectionWrite.KEEP) {
@@ -132,11 +133,12 @@ public final class VirtualChunk {
             }
             states[index] = state;
             nonAir += (traits.isAir(previous) ? 0 : -1) + (traits.isAir(state) ? 0 : 1);
+            fluids += (traits.hasFluid(previous) ? -1 : 0) + (traits.hasFluid(state) ? 1 : 0);
         }
         if (states == null) {
             return section;
         }
-        return new ChunkSection(PalettedValues.of(states, section.states().format()), section.biomes(), nonAir);
+        return new ChunkSection(PalettedValues.of(states, section.states().format()), section.biomes(), nonAir, fluids);
     }
 
     private ChunkSection fillSection(int sectionIndex, LocalBox box, int state, BlockStateTraits traits) {
@@ -145,8 +147,10 @@ public final class VirtualChunk {
         int fromY = Math.max(box.minY(), sectionMinY) - sectionMinY;
         int toY = Math.min(box.maxY(), sectionMinY + 15) - sectionMinY;
         boolean placesAir = traits.isAir(state);
+        boolean placesFluid = traits.hasFluid(state);
         int[] states = null;
         int nonAir = section.nonAirCount();
+        int fluids = section.fluidCount();
         for (int y = fromY; y <= toY; y++) {
             for (int z = box.minZ(); z <= box.maxZ(); z++) {
                 for (int x = box.minX(); x <= box.maxX(); x++) {
@@ -160,13 +164,14 @@ public final class VirtualChunk {
                     }
                     states[index] = state;
                     nonAir += (traits.isAir(previous) ? 0 : -1) + (placesAir ? 0 : 1);
+                    fluids += (traits.hasFluid(previous) ? -1 : 0) + (placesFluid ? 1 : 0);
                 }
             }
         }
         if (states == null) {
             return section;
         }
-        return new ChunkSection(PalettedValues.of(states, section.states().format()), section.biomes(), nonAir);
+        return new ChunkSection(PalettedValues.of(states, section.states().format()), section.biomes(), nonAir, fluids);
     }
 
     private static int columnHeight(List<ChunkSection> sections, int x, int z, HeightmapType type, BlockStateTraits traits) {

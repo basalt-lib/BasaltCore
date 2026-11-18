@@ -97,6 +97,37 @@ class VirtualChunkTest {
     }
 
     @Test
+    void countsTheFluidsOfEachSectionThroughEveryChange() {
+        VirtualChunk pool = platform.filled(new LocalBox(0, -64, 0, 15, -63, 15), TestBlocks.WATER, TRAITS);
+        VirtualChunk drained = pool.withBlock(0, -64, 0, TestBlocks.STONE, TRAITS);
+        int[] states = keepAll();
+        states[SectionWrite.blockIndex(1, 0, 0)] = TestBlocks.AIR;
+        states[SectionWrite.blockIndex(5, 4, 5)] = TestBlocks.WATER;
+        VirtualChunk written = drained.written(List.of(new SectionWrite(0, states)), TRAITS);
+
+        assertEquals(0, platform.sections().get(0).fluidCount());
+        assertEquals(512, pool.sections().get(0).fluidCount());
+        assertEquals(511, drained.sections().get(0).fluidCount());
+        assertEquals(511, written.sections().get(0).fluidCount());
+        assertEquals(drained.sections().get(0).nonAirCount(), written.sections().get(0).nonAirCount());
+    }
+
+    @Test
+    void buildsTheFluidCountOfEachSection() {
+        VirtualChunk built = new VirtualChunkBuilder(new ChunkKey(0, 0), TestBlocks.OVERWORLD, TestBlocks.AIR)
+                .set(0, -64, 0, TestBlocks.WATER)
+                .set(1, -64, 0, TestBlocks.WATER)
+                .set(2, -64, 0, TestBlocks.STONE)
+                .set(0, 0, 0, TestBlocks.WATER)
+                .build(TestBlocks.FORMATS, TRAITS, TestBlocks.PLAINS);
+
+        assertEquals(2, built.sections().get(0).fluidCount());
+        assertEquals(3, built.sections().get(0).nonAirCount());
+        assertEquals(1, built.sections().get(TestBlocks.OVERWORLD.sectionIndex(0)).fluidCount());
+        assertEquals(0, built.sections().get(1).fluidCount());
+    }
+
+    @Test
     void returnsItselfWhenTheBlockDoesNotChange() {
         assertSame(platform, platform.withBlock(3, -54, 4, TestBlocks.STONE, TRAITS));
     }

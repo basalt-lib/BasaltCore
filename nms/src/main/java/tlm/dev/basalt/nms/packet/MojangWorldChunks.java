@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.Blocks;
 import tlm.dev.basalt.core.chunk.ChunkFormats;
 import tlm.dev.basalt.core.chunk.ChunkShape;
 import tlm.dev.basalt.core.chunk.LocalBox;
+import tlm.dev.basalt.core.chunk.SectionHeader;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.chunk.VirtualChunkBuilder;
 import tlm.dev.basalt.core.edit.SectionWrite;
@@ -36,7 +37,7 @@ public final class MojangWorldChunks implements WorldChunks<VirtualChunk> {
     }
 
     static ChunkFormats formats(RegistryAccess registries) {
-        return ChunkFormats.of(Block.BLOCK_STATE_REGISTRY.size(), registries.lookupOrThrow(Registries.BIOME).size());
+        return ChunkFormats.of(Block.BLOCK_STATE_REGISTRY.size(), registries.lookupOrThrow(Registries.BIOME).size(), SectionHeader.BLOCK_COUNT);
     }
 
     @Override

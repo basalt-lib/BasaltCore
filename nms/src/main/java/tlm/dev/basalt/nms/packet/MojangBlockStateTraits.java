@@ -13,6 +13,11 @@ final class MojangBlockStateTraits implements BlockStateTraits {
     }
 
     @Override
+    public boolean hasFluid(int state) {
+        return !Block.stateById(state).getFluidState().isEmpty();
+    }
+
+    @Override
     public boolean countsIn(HeightmapType type, int state) {
         Heightmap.Types mojangType = switch (type) {
             case WORLD_SURFACE -> Heightmap.Types.WORLD_SURFACE;

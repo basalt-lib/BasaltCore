@@ -11,7 +11,8 @@ final class TestBlocks implements BlockStateTraits {
     static final int FLOWER = 2;
     static final int LEAVES = 3;
     static final int PLAINS = 4;
-    static final ChunkFormats FORMATS = ChunkFormats.of(30000, 70);
+    static final int WATER = 5;
+    static final ChunkFormats FORMATS = ChunkFormats.of(30000, 70, SectionHeader.BLOCK_COUNT);
     static final ChunkShape OVERWORLD = new ChunkShape(-64, 24);
 
     static void paint(DebugPattern pattern, VirtualChunkBuilder builder, ToIntFunction<String> stateOf) {
@@ -30,6 +31,11 @@ final class TestBlocks implements BlockStateTraits {
     @Override
     public boolean isAir(int state) {
         return state == AIR;
+    }
+
+    @Override
+    public boolean hasFluid(int state) {
+        return state == WATER;
     }
 
     @Override

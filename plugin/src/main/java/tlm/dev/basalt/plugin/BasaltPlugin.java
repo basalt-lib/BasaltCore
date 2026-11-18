@@ -17,6 +17,7 @@ import tlm.dev.basalt.core.interaction.InteractionService;
 import tlm.dev.basalt.core.interaction.InteractionSettings;
 import tlm.dev.basalt.core.interaction.InteractionTools;
 import tlm.dev.basalt.core.platform.GameVersion;
+import tlm.dev.basalt.core.platform.SupportedVersion;
 import tlm.dev.basalt.core.visibility.ChunkViews;
 import tlm.dev.basalt.core.visibility.EntityMaskSettings;
 import tlm.dev.basalt.core.visibility.EntityMasking;
@@ -33,6 +34,7 @@ import tlm.dev.basalt.nms.MojangInteractions;
 import tlm.dev.basalt.nms.MojangWorlds;
 import tlm.dev.basalt.nms.platform.MojangBlockStates;
 import tlm.dev.basalt.nms.platform.MojangGameVersionSource;
+import tlm.dev.basalt.nms.port.MojangVersion;
 import tlm.dev.basalt.nms.port.WorldSource;
 import tlm.dev.basalt.plugin.command.BlueprintDebugTools;
 import tlm.dev.basalt.plugin.command.DebugBlueprintCommand;
@@ -86,11 +88,13 @@ import tlm.dev.basalt.plugin.world.ViewWorldViewers;
 import tlm.dev.basalt.plugin.world.ViewerEvents;
 import tlm.dev.basalt.plugin.world.WorldExits;
 import tlm.dev.basalt.plugin.world.WorldSessions;
+import tlm.dev.basalt.v1_21_11.Mojang1_21_11;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -100,6 +104,17 @@ public final class BasaltPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        GameVersion game = new MojangGameVersionSource().current();
+        Optional<SupportedVersion> supported = SupportedVersion.of(game);
+        if (supported.isEmpty()) {
+            getLogger().severe("Basalt " + getPluginMeta().getVersion() + " runs on Minecraft " + SupportedVersion.names()
+                    + ", not on " + game.name() + " (protocol " + game.protocol() + "): disabled");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+        MojangVersion version = switch (supported.get()) {
+            case V1_21_11 -> new Mojang1_21_11();
+        };
         YamlFiles files = new YamlFiles(this);
         MessageSettings messages = new MessageFiles(files, getLogger()).load();
         ConfigFile config = files.load(InteractionSettingsParser.FILE_NAME);
@@ -117,17 +132,17 @@ public final class BasaltPlugin extends JavaPlugin {
         InteractionReplies replies = MojangInteractions.replies(getServer());
         ChunkEncoders encoders = new ChunkEncoders(WorldSettingsParser.encoderThreads(reader), getLogger());
         EntityShapes shapes = MojangEntities.shapes(getServer());
-        VirtualEntityService entities = new VirtualEntityService(new EntityTools(MojangEntities.ids(), MojangEntities.display(getServer()),
+        VirtualEntityService entities = new VirtualEntityService(new EntityTools(MojangEntities.ids(getServer(), version), MojangEntities.display(getServer()),
                 new ChunkEntityViews(getServer(), viewsOnceCreated::get, worldsOnceCreated::get),
                 new BukkitEntityEvents(basaltOnceCreated::get, getServer())), entitySettings);
         EntityExits entityExits = new EntityExits(entities);
         WorldExits worldExits = new WorldExits(worldsOnceCreated::get, viewsOnceCreated::get);
         PlayerSeparations separations = new PlayerSeparations(this, worldsOnceCreated::get);
-        WorldChunks<VirtualChunk> chunks = MojangWorlds.chunks(getServer());
+        WorldChunks<VirtualChunk> chunks = MojangWorlds.chunks(getServer(), version);
         VirtualWorlds<VirtualChunk> worlds = new VirtualWorlds<>(new WorldTools<>(chunks, MojangWorlds.realChunks(getServer()),
                 new ViewWorldViewers(viewsOnceCreated::get, replies), WorldListener.both(WorldListener.both(worldExits, entityExits), separations)), worldSettings, UUID::randomUUID);
         worldsOnceCreated.set(worlds);
-        ChunkViews views = MojangChunkViews.create(getServer(), queues,
+        ChunkViews views = MojangChunkViews.create(getServer(), version, queues,
                 ViewChanges.both(masks, ViewChanges.both(entityExits, ViewChanges.both(worldExits, ViewChanges.both(separations,
                         new ViewerEvents(basaltOnceCreated::get, getServer()))))), new WorldSource(worlds, chunks, encoders));
         viewsOnceCreated.set(views);
@@ -172,7 +187,6 @@ public final class BasaltPlugin extends JavaPlugin {
                 new DebugBlueprintCommand(basalt, debugWorlds, blueprintTools, messages)));
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> event.registrar().register(commands.node()));
 
-        GameVersion game = new MojangGameVersionSource().current();
         getLogger().info("Basalt " + BasaltProvider.get().version()
                 + " on Minecraft " + game.name() + " (protocol " + game.protocol() + ")");
     }

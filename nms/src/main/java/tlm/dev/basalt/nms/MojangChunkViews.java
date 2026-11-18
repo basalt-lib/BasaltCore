@@ -13,6 +13,7 @@ import tlm.dev.basalt.nms.packet.MojangChunkPackets;
 import tlm.dev.basalt.nms.packet.ViewPacketFilter;
 import tlm.dev.basalt.nms.port.ChannelFilters;
 import tlm.dev.basalt.nms.port.ChunkPackets;
+import tlm.dev.basalt.nms.port.MojangVersion;
 import tlm.dev.basalt.nms.port.WorldSource;
 import tlm.dev.basalt.nms.view.ChunkPacketCache;
 import tlm.dev.basalt.nms.view.MojangViewDisplay;
@@ -23,11 +24,11 @@ public final class MojangChunkViews {
     private MojangChunkViews() {
     }
 
-    public static ChunkViews create(Server server, InteractionInbox inbox, ViewChanges changes, WorldSource source) {
+    public static ChunkViews create(Server server, MojangVersion version, InteractionInbox inbox, ViewChanges changes, WorldSource source) {
         ChunkRequests requests = new ChunkRequests();
-        ChunkPackets packets = new MojangChunkPackets(((CraftServer) server).getServer().registryAccess());
+        ChunkPackets packets = new MojangChunkPackets(((CraftServer) server).getServer().registryAccess(), version.sectionHeader());
         ViewTools tools = new ViewTools(new NettyPlayerChannels(), packets,
-                (player, view) -> new ChannelFilters(new ViewPacketFilter(player, view, requests), new InteractionPacketReader(player, view, inbox)),
+                (player, view) -> new ChannelFilters(new ViewPacketFilter(player, view, requests), new InteractionPacketReader(player, view, inbox, version)),
                 new ChunkPacketCache(source, packets));
         return new ChunkViewService(new MojangViewDisplay(server, tools), changes, requests);
     }

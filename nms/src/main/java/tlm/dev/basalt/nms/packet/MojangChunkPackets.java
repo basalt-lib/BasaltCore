@@ -11,6 +11,7 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import tlm.dev.basalt.core.chunk.ChunkPacketWriter;
+import tlm.dev.basalt.core.chunk.SectionHeader;
 import tlm.dev.basalt.core.chunk.VirtualChunk;
 import tlm.dev.basalt.core.position.ChunkKey;
 import tlm.dev.basalt.core.visibility.PacketMemory;
@@ -30,9 +31,9 @@ public final class MojangChunkPackets implements ChunkPackets {
     private final RegistryAccess registries;
     private final ChunkPacketWriter writer;
 
-    public MojangChunkPackets(RegistryAccess registries) {
+    public MojangChunkPackets(RegistryAccess registries, SectionHeader header) {
         this.registries = registries;
-        this.writer = new ChunkPacketWriter(MojangWorldChunks.formats(registries));
+        this.writer = new ChunkPacketWriter(MojangWorldChunks.formats(registries, header));
     }
 
     @Override

@@ -2,7 +2,6 @@ package tlm.dev.basalt.nms.packet;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.protocol.game.ServerboundInteractPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
 import net.minecraft.world.InteractionHand;
@@ -22,27 +21,30 @@ import tlm.dev.basalt.core.visibility.InboundKind;
 import tlm.dev.basalt.core.visibility.InboundVerdict;
 import tlm.dev.basalt.core.visibility.PlayerView;
 import tlm.dev.basalt.nms.port.InboundGate;
+import tlm.dev.basalt.nms.port.MojangVersion;
 
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicReference;
 
 public final class InteractionPacketReader implements InboundGate {
 
     private final UUID player;
     private final PlayerView view;
     private final InteractionInbox inbox;
+    private final MojangVersion version;
 
-    public InteractionPacketReader(UUID player, PlayerView view, InteractionInbox inbox) {
+    public InteractionPacketReader(UUID player, PlayerView view, InteractionInbox inbox, MojangVersion version) {
         this.player = player;
         this.view = view;
         this.inbox = inbox;
+        this.version = version;
     }
 
     @Override
     public boolean consumes(Object message) {
-        if (message instanceof ServerboundInteractPacket interact) {
-            return consumesEntity(interact);
+        Optional<EntityRequest> entity = version.entityRequest(message);
+        if (entity.isPresent()) {
+            return consumesEntity(entity.get());
         }
         Optional<BlockRequest> request = switch (message) {
             case ServerboundPlayerActionPacket action -> breaking(action);
@@ -61,34 +63,12 @@ public final class InteractionPacketReader implements InboundGate {
         return true;
     }
 
-    private boolean consumesEntity(ServerboundInteractPacket packet) {
-        if (InboundFilter.decide(InboundFacts.entity(packet.getEntityId()), view.snapshot()) == InboundVerdict.PASS) {
+    private boolean consumesEntity(EntityRequest request) {
+        if (InboundFilter.decide(InboundFacts.entity(request.entity()), view.snapshot()) == InboundVerdict.PASS) {
             return false;
         }
-        inbox.offer(player, entityRequest(packet));
+        inbox.offer(player, request);
         return true;
-    }
-
-    private static EntityRequest entityRequest(ServerboundInteractPacket packet) {
-        int id = packet.getEntityId();
-        AtomicReference<EntityRequest> read = new AtomicReference<>(EntityRequest.attack(id));
-        packet.dispatch(new ServerboundInteractPacket.Handler() {
-            @Override
-            public void onInteraction(InteractionHand hand) {
-                read.set(EntityRequest.interact(id, hand(hand)));
-            }
-
-            @Override
-            public void onInteraction(InteractionHand hand, Vec3 location) {
-                read.set(EntityRequest.interactAt(id, hand(hand), new Point(location.x, location.y, location.z)));
-            }
-
-            @Override
-            public void onAttack() {
-                read.set(EntityRequest.attack(id));
-            }
-        });
-        return read.get();
     }
 
     private static Optional<BlockRequest> breaking(ServerboundPlayerActionPacket packet) {

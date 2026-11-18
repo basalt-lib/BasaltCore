@@ -1,6 +1,5 @@
 package tlm.dev.basalt.nms;
 
-import net.minecraft.world.entity.Entity;
 import org.bukkit.Server;
 import tlm.dev.basalt.core.entity.EntityDisplay;
 import tlm.dev.basalt.core.entity.EntityShapes;
@@ -8,6 +7,7 @@ import tlm.dev.basalt.core.entity.VirtualEntityIds;
 import tlm.dev.basalt.nms.channel.NettyPlayerChannels;
 import tlm.dev.basalt.nms.entity.MojangEntityDisplay;
 import tlm.dev.basalt.nms.entity.MojangEntityShapes;
+import tlm.dev.basalt.nms.port.MojangVersion;
 
 public final class MojangEntities {
 
@@ -22,7 +22,7 @@ public final class MojangEntities {
         return new MojangEntityShapes(server);
     }
 
-    public static VirtualEntityIds ids() {
-        return new VirtualEntityIds(Entity::nextEntityId);
+    public static VirtualEntityIds ids(Server server, MojangVersion version) {
+        return new VirtualEntityIds(version.entityIds(server));
     }
 }

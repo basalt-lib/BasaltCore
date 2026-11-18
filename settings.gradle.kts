@@ -7,4 +7,4 @@ pluginManagement {
 
 rootProject.name = "BasaltCore"
 
-include("api", "core", "nms", "plugin")
+include("api", "core", "nms", "plugin", "v1_21_11")

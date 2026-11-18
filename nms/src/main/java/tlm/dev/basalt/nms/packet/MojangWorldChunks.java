@@ -30,14 +30,14 @@ public final class MojangWorldChunks implements WorldChunks<VirtualChunk> {
     private final ChunkFormats formats;
     private final int plains;
 
-    public MojangWorldChunks(RegistryAccess registries) {
+    public MojangWorldChunks(RegistryAccess registries, SectionHeader header) {
         Registry<Biome> biomes = registries.lookupOrThrow(Registries.BIOME);
-        this.formats = formats(registries);
+        this.formats = formats(registries, header);
         this.plains = biomes.getId(biomes.getValueOrThrow(Biomes.PLAINS));
     }
 
-    static ChunkFormats formats(RegistryAccess registries) {
-        return ChunkFormats.of(Block.BLOCK_STATE_REGISTRY.size(), registries.lookupOrThrow(Registries.BIOME).size(), SectionHeader.BLOCK_COUNT);
+    static ChunkFormats formats(RegistryAccess registries, SectionHeader header) {
+        return ChunkFormats.of(Block.BLOCK_STATE_REGISTRY.size(), registries.lookupOrThrow(Registries.BIOME).size(), header);
     }
 
     @Override

@@ -21,7 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SeamTest {
 
-    private static final List<String> MODULES = List.of("api", "core", "nms", "plugin");
+    private static final List<String> MODULES = List.of("api", "core", "nms", "plugin", "v1_21_11");
+    private static final Set<String> MOJANG_MODULES = Set.of("nms", "v1_21_11");
     private static final Set<String> SKIPPED_FOLDERS = Set.of("build", ".gradle", ".git", ".idea", ".kotlin", "run", "out");
     private static final List<String> SCANNED_EXTENSIONS = List.of(".java", ".kts", ".yml", ".yaml", ".properties");
     private static final String API_SOURCES = "api/src/main/java/";
@@ -33,17 +34,20 @@ class SeamTest {
             "api", Set.of(),
             "core", Set.of("blueprint", "chunk", "entity", "interaction", "visibility", "world"),
             "nms", Set.of("blueprint", "channel", "entity", "interaction", "packet", "view"),
-            "plugin", Set.of("command", "entity", "facade", "interaction", "listener", "masking", "world"));
+            "plugin", Set.of("command", "entity", "facade", "interaction", "listener", "masking", "world"),
+            "v1_21_11", Set.of());
     private static final Map<String, Set<String>> PLUMBING = Map.of(
             "api", Set.of("", "event"),
             "core", Set.of("debug", "edit", "platform", "position"),
             "nms", Set.of("", "platform", "port"),
-            "plugin", Set.of("", "config", "lifecycle"));
+            "plugin", Set.of("", "config", "lifecycle"),
+            "v1_21_11", Set.of(""));
     private static final Set<String> COMPOSITION_ROOTS = Set.of("nms", "plugin");
     private static final Map<String, Pattern> HIGHER_MODULES = Map.of(
-            "api", Pattern.compile("tlm[.]dev[.]basalt[.](core|nms|plugin)\\b"),
-            "core", Pattern.compile("tlm[.]dev[.]basalt[.](nms|plugin)\\b"),
-            "nms", Pattern.compile("tlm[.]dev[.]basalt[.]plugin\\b"));
+            "api", Pattern.compile("tlm[.]dev[.]basalt[.](core|nms|plugin|v1_21_11)\\b"),
+            "core", Pattern.compile("tlm[.]dev[.]basalt[.](nms|plugin|v1_21_11)\\b"),
+            "nms", Pattern.compile("tlm[.]dev[.]basalt[.](plugin|v1_21_11)\\b"),
+            "v1_21_11", Pattern.compile("tlm[.]dev[.]basalt[.]plugin\\b"));
     private static final Pattern WORK_MARKER = Pattern.compile("\\b(TO[D]O|FIX[M]E)\\b");
     private static final Pattern PUBLIC_TYPE = Pattern.compile(
             "\\bpublic\\s+(?:(?:static|final|abstract|sealed|non-sealed|strictfp)\\s+)*(?:class|interface|enum|record|@interface)\\s+(\\w+)");
@@ -75,10 +79,10 @@ class SeamTest {
     @Test
     void mojangClassesStayInNms() {
         List<String> found = new ArrayList<>();
-        found.addAll(occurrences(files.stream().filter(file -> !file.module().equals("nms") && !file.module().equals("plugin")), MOJANG));
+        found.addAll(occurrences(files.stream().filter(file -> !MOJANG_MODULES.contains(file.module()) && !file.module().equals("plugin")), MOJANG));
         found.addAll(occurrences(files.stream().filter(file -> file.module().equals("plugin")), MOJANG_BUT_BRIGADIER));
 
-        assertEquals(List.of(), found, "Mojang or CraftBukkit classes outside nms, Brigadier aside in plugin");
+        assertEquals(List.of(), found, "Mojang or CraftBukkit classes outside nms and the version modules, Brigadier aside in plugin");
     }
 
     @Test

@@ -45,7 +45,7 @@ final class PacketClassifier {
     }
 
     static ChunkKey key(ChunkPos pos) {
-        return new ChunkKey(pos.x, pos.z);
+        return new ChunkKey(pos.getMinBlockX() >> 4, pos.getMinBlockZ() >> 4);
     }
 
     private static ChunkKey key(BlockPos pos) {

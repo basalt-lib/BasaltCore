@@ -1,5 +1,7 @@
 package tlm.dev.basalt.nms.entity;
 
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EntityType;
 import org.bukkit.Server;
 import org.bukkit.craftbukkit.CraftServer;
@@ -18,14 +20,18 @@ public final class MojangEntityShapes implements EntityShapes {
 
     @Override
     public Optional<EntityShape> shapeOf(String type) {
-        return EntityType.byString(type).map(found -> new EntityShape(found.getWidth(), found.getHeight()));
+        return entityType(type).map(found -> new EntityShape(found.getWidth(), found.getHeight()));
     }
 
     @Override
     public boolean creatable(String type) {
-        return EntityType.byString(type)
+        return entityType(type)
                 .filter(EntityType::canSummon)
                 .filter(found -> found.isEnabled(((CraftServer) server).getServer().overworld().enabledFeatures()))
                 .isPresent();
+    }
+
+    private static Optional<EntityType<?>> entityType(String type) {
+        return BuiltInRegistries.ENTITY_TYPE.getOptional(Identifier.tryParse(type));
     }
 }

@@ -17,6 +17,6 @@ public final class MojangBlockStates {
         if (state < 0 || state >= Block.BLOCK_STATE_REGISTRY.size()) {
             throw new IllegalArgumentException("unknown block state " + state);
         }
-        return CraftBlockData.fromData(Block.stateById(state));
+        return CraftBlockData.createData(Block.stateById(state));
     }
 }

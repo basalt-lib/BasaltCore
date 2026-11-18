@@ -137,7 +137,7 @@ public final class MojangEntityDisplay implements EntityDisplay {
     }
 
     private static Optional<Entity> template(ServerPlayer viewer, VirtualEntity entity) {
-        Optional<Entity> created = EntityType.byString(entity.type())
+        Optional<Entity> created = entityType(entity.type())
                 .map(type -> type.create(viewer.level(), EntitySpawnReason.COMMAND));
         created.ifPresent(template -> {
             template.setCustomName(entity.looks().name()
@@ -173,7 +173,7 @@ public final class MojangEntityDisplay implements EntityDisplay {
         if (entity.looks().silent()) {
             return Optional.empty();
         }
-        Optional<EntityType<?>> type = EntityType.byString(entity.type());
+        Optional<EntityType<?>> type = entityType(entity.type());
         Identifier typeKey = Identifier.tryParse(entity.type());
         if (type.isEmpty() || typeKey == null) {
             return Optional.empty();
@@ -185,6 +185,10 @@ public final class MojangEntityDisplay implements EntityDisplay {
         float pitch = (random.nextFloat() - random.nextFloat()) * PITCH_SPREAD + 1.0F;
         return sound.map(event -> new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(event), source,
                 at.x, at.y, at.z, VOLUME, pitch, random.nextLong()));
+    }
+
+    private static Optional<EntityType<?>> entityType(String type) {
+        return BuiltInRegistries.ENTITY_TYPE.getOptional(Identifier.tryParse(type));
     }
 
     private static Vec3 position(VirtualEntity entity) {

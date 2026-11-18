@@ -103,6 +103,7 @@ dependencies:
 - `entity`: spawn, move, set health, remove
 - `blueprint`: capture, read, place, drop
 - `events`: record, cancel or change `Virtual*Event`
+- `overlay`: create, set and clear blocks, play a lid, show items, add and remove viewers, keep or remove broken blocks, count the overlay events, list, close
 
 ## Example
 

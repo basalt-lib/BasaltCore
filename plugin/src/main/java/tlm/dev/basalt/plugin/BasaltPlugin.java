@@ -54,6 +54,8 @@ import tlm.dev.basalt.plugin.command.DebugEventsCommand;
 import tlm.dev.basalt.plugin.command.DebugWorldCommand;
 import tlm.dev.basalt.plugin.command.DebugWorlds;
 import tlm.dev.basalt.plugin.command.DebugEntityCommand;
+import tlm.dev.basalt.plugin.command.DebugOverlayCommand;
+import tlm.dev.basalt.plugin.command.DebugOverlays;
 import tlm.dev.basalt.plugin.config.BlueprintSettingsParser;
 import tlm.dev.basalt.plugin.config.ConfigFile;
 import tlm.dev.basalt.plugin.config.ConfigReader;
@@ -213,6 +215,8 @@ public final class BasaltPlugin extends JavaPlugin {
         DebugEventWatch eventWatch = new DebugEventWatch(this);
         eventWatch.listen();
         DebugWorlds debugWorlds = new DebugWorlds(views::memory);
+        DebugOverlays debugOverlays = new DebugOverlays();
+        debugOverlays.listen(this);
         Path blueprintFolder = blueprintFolder();
         BlueprintDebugTools blueprintTools = new BlueprintDebugTools(blueprintFolder,
                 (world, file, x, y, z) -> MojangBlueprints.placeReal(world, file, planSettings.maxFileBytes(), x, y, z), basalt::bytesOf);
@@ -221,7 +225,8 @@ public final class BasaltPlugin extends JavaPlugin {
                 new DebugEntityCommand(basalt, entities, getServer(), messages),
                 new DebugWorldCommand(basalt, this, messages, debugWorlds),
                 new DebugEventsCommand(eventWatch, getServer(), messages),
-                new DebugBlueprintCommand(basalt, debugWorlds, blueprintTools, messages)));
+                new DebugBlueprintCommand(basalt, debugWorlds, blueprintTools, messages),
+                new DebugOverlayCommand(basalt, this, messages, debugOverlays)));
         getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> event.registrar().register(commands.node()));
 
         getLogger().info("Basalt " + BasaltProvider.get().version()

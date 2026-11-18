@@ -50,7 +50,24 @@ public enum MessageKey {
     DEBUG_BLUEPRINT_NO_FILE("debug-blueprint-no-file"),
     DEBUG_BLUEPRINT_LIST("debug-blueprint-list"),
     DEBUG_BLUEPRINT_DROPPED("debug-blueprint-dropped"),
-    DEBUG_BLUEPRINT_INFO("debug-blueprint-info");
+    DEBUG_BLUEPRINT_INFO("debug-blueprint-info"),
+    DEBUG_OVERLAY_CREATED("debug-overlay-created"),
+    DEBUG_OVERLAY_BAD_NAME("debug-overlay-bad-name"),
+    DEBUG_OVERLAY_EXISTS("debug-overlay-exists"),
+    DEBUG_OVERLAY_UNKNOWN("debug-overlay-unknown"),
+    DEBUG_OVERLAY_REFUSED("debug-overlay-refused"),
+    DEBUG_OVERLAY_BLOCK("debug-overlay-block"),
+    DEBUG_OVERLAY_CLEARED("debug-overlay-cleared"),
+    DEBUG_OVERLAY_LID("debug-overlay-lid"),
+    DEBUG_OVERLAY_ITEM("debug-overlay-item"),
+    DEBUG_OVERLAY_ADDED("debug-overlay-added"),
+    DEBUG_OVERLAY_REMOVED("debug-overlay-removed"),
+    DEBUG_OVERLAY_NOT_VIEWING("debug-overlay-not-viewing"),
+    DEBUG_OVERLAY_BREAKS("debug-overlay-breaks"),
+    DEBUG_OVERLAY_CLOSED("debug-overlay-closed"),
+    DEBUG_OVERLAY_INFO("debug-overlay-info"),
+    DEBUG_OVERLAY_LIST("debug-overlay-list"),
+    DEBUG_OVERLAY_LIST_ENTRY("debug-overlay-list-entry");
 
     private final String path;
 

@@ -18,6 +18,7 @@ import tlm.dev.basalt.core.interaction.InteractionSettings;
 import tlm.dev.basalt.core.interaction.InteractionTools;
 import tlm.dev.basalt.core.platform.GameVersion;
 import tlm.dev.basalt.core.platform.SupportedVersion;
+import tlm.dev.basalt.core.overlay.OverlayViews;
 import tlm.dev.basalt.core.visibility.ChunkViews;
 import tlm.dev.basalt.core.visibility.EntityMaskSettings;
 import tlm.dev.basalt.core.visibility.EntityMasking;
@@ -31,10 +32,13 @@ import tlm.dev.basalt.nms.MojangBlueprints;
 import tlm.dev.basalt.nms.MojangChunkViews;
 import tlm.dev.basalt.nms.MojangEntities;
 import tlm.dev.basalt.nms.MojangInteractions;
+import tlm.dev.basalt.nms.MojangOverlays;
 import tlm.dev.basalt.nms.MojangWorlds;
 import tlm.dev.basalt.nms.platform.MojangBlockStates;
 import tlm.dev.basalt.nms.platform.MojangGameVersionSource;
+import tlm.dev.basalt.nms.platform.MojangLook;
 import tlm.dev.basalt.nms.port.MojangVersion;
+import tlm.dev.basalt.nms.port.ViewInputs;
 import tlm.dev.basalt.nms.port.WorldSource;
 import tlm.dev.basalt.plugin.command.BlueprintDebugTools;
 import tlm.dev.basalt.plugin.command.DebugBlueprintCommand;
@@ -144,9 +148,12 @@ public final class BasaltPlugin extends JavaPlugin {
         VirtualWorlds<VirtualChunk> worlds = new VirtualWorlds<>(new WorldTools<>(chunks, MojangWorlds.realChunks(getServer()),
                 new ViewWorldViewers(viewsOnceCreated::get, replies), WorldListener.both(WorldListener.both(worldExits, entityExits), separations)), worldSettings, UUID::randomUUID);
         worldsOnceCreated.set(worlds);
-        ChunkViews views = MojangChunkViews.create(getServer(), version, queues,
+        OverlayViews<MojangLook> overlayViews = new OverlayViews<>();
+        InteractionQueues overlayQueues = new InteractionQueues(settings.maxActionsPerSecond());
+        ChunkViews views = MojangChunkViews.create(getServer(), version, new ViewInputs(queues,
                 ViewChanges.both(masks, ViewChanges.both(entityExits, ViewChanges.both(worldExits, ViewChanges.both(separations,
-                        new ViewerEvents(basaltOnceCreated::get, getServer()))))), new WorldSource(worlds, chunks, encoders));
+                        new ViewerEvents(basaltOnceCreated::get, getServer()))))), new WorldSource(worlds, chunks, encoders),
+                MojangOverlays.channel(overlayViews, overlayQueues, version)));
         viewsOnceCreated.set(views);
         MojangBlockStates blockStates = new MojangBlockStates();
         PlanService plans = new PlanService(MojangBlueprints.names(), MojangBlueprints.realBlocks(getServer()), planSettings);

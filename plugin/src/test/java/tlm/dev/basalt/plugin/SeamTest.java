@@ -33,7 +33,7 @@ class SeamTest {
     private static final Map<String, Set<String>> FAMILIES = Map.of(
             "api", Set.of(),
             "core", Set.of("blueprint", "chunk", "entity", "interaction", "overlay", "visibility", "world"),
-            "nms", Set.of("blueprint", "channel", "entity", "interaction", "packet", "view"),
+            "nms", Set.of("blueprint", "channel", "entity", "interaction", "overlay", "packet", "view"),
             "plugin", Set.of("command", "entity", "facade", "interaction", "listener", "masking", "world"),
             "v1_21_11", Set.of(),
             "v26_2", Set.of());

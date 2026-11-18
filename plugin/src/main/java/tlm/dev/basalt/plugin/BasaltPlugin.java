@@ -89,6 +89,7 @@ import tlm.dev.basalt.plugin.world.ViewerEvents;
 import tlm.dev.basalt.plugin.world.WorldExits;
 import tlm.dev.basalt.plugin.world.WorldSessions;
 import tlm.dev.basalt.v1_21_11.Mojang1_21_11;
+import tlm.dev.basalt.v26_2.Mojang26_2;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -114,6 +115,7 @@ public final class BasaltPlugin extends JavaPlugin {
         }
         MojangVersion version = switch (supported.get()) {
             case V1_21_11 -> new Mojang1_21_11();
+            case V26_2 -> new Mojang26_2();
         };
         YamlFiles files = new YamlFiles(this);
         MessageSettings messages = new MessageFiles(files, getLogger()).load();

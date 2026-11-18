@@ -4,6 +4,7 @@ dependencies {
     implementation(project(":core"))
     implementation(project(":nms"))
     implementation(project(":v1_21_11"))
+    implementation(project(":v26_2"))
 }
 
 val bundledModules = configurations.runtimeClasspath.get().incoming.artifactView {

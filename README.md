@@ -1,7 +1,7 @@
 <p align="center"><img src="assets/basalt.png" width="96" alt="Basalt"></p>
 <h1 align="center">Basalt</h1>
 <p align="center">Per-player virtual worlds for Paper, made of packets.</p>
-<p align="center"><a href="https://github.com/basalt-lib/BasaltCore/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/basalt-lib/BasaltCore/build.yml?branch=master&amp;label=build&amp;style=flat" alt="build"></a> <img src="https://img.shields.io/badge/Paper-1.21.11-555?style=flat" alt="Paper 1.21.11"> <img src="https://img.shields.io/badge/Java-21%2B-555?style=flat" alt="Java 21+"> <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-555?style=flat" alt="Apache-2.0"></a></p>
+<p align="center"><a href="https://github.com/basalt-lib/BasaltCore/actions/workflows/build.yml"><img src="https://img.shields.io/github/actions/workflow/status/basalt-lib/BasaltCore/build.yml?branch=master&amp;label=build&amp;style=flat" alt="build"></a> <img src="https://img.shields.io/badge/Paper-1.21.11%20%7C%2026.2-555?style=flat" alt="Paper 1.21.11 and 26.2"> <img src="https://img.shields.io/badge/Java-21%2B-555?style=flat" alt="Java 21+"> <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-555?style=flat" alt="Apache-2.0"></a></p>
 
 ## Features
 
@@ -37,7 +37,7 @@ VirtualWorld startRun(Plugin plugin, Blueprint dungeon, Location origin, Player 
 
 ## Install
 
-Paper 1.21.11, Java 21+. Put `BasaltCore-<version>.jar` in `plugins/`.
+Paper 1.21.11 (Java 21+) or 26.2 (Java 25), one jar for both. Put `BasaltCore-<version>.jar` in `plugins/`.
 
 Not on a Maven repository yet. Build with JDK 25 and install the API locally:
 
@@ -112,7 +112,7 @@ dependencies:
 - Virtual chunks: full sky light, no block light, plains biome
 - The real area must be air, `createWorld` checks it
 - Bukkit events don't fire for virtual actions, use `Virtual*Event`
-- Paper 1.21.11 only, no Folia
+- Paper 1.21.11 and 26.2 only, no Folia: on another version BasaltCore disables itself
 
 ## Status
 

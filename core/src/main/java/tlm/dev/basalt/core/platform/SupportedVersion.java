@@ -5,7 +5,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 public enum SupportedVersion {
-    V1_21_11("1.21.11", 774);
+    V1_21_11("1.21.11", 774),
+    V26_2("26.2", 776);
 
     private final String gameName;
     private final int protocol;

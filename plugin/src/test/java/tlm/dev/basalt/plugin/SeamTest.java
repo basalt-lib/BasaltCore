@@ -21,8 +21,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SeamTest {
 
-    private static final List<String> MODULES = List.of("api", "core", "nms", "plugin", "v1_21_11");
-    private static final Set<String> MOJANG_MODULES = Set.of("nms", "v1_21_11");
+    private static final List<String> MODULES = List.of("api", "core", "nms", "plugin", "v1_21_11", "v26_2");
+    private static final Set<String> MOJANG_MODULES = Set.of("nms", "v1_21_11", "v26_2");
     private static final Set<String> SKIPPED_FOLDERS = Set.of("build", ".gradle", ".git", ".idea", ".kotlin", "run", "out");
     private static final List<String> SCANNED_EXTENSIONS = List.of(".java", ".kts", ".yml", ".yaml", ".properties");
     private static final String API_SOURCES = "api/src/main/java/";
@@ -35,19 +35,22 @@ class SeamTest {
             "core", Set.of("blueprint", "chunk", "entity", "interaction", "visibility", "world"),
             "nms", Set.of("blueprint", "channel", "entity", "interaction", "packet", "view"),
             "plugin", Set.of("command", "entity", "facade", "interaction", "listener", "masking", "world"),
-            "v1_21_11", Set.of());
+            "v1_21_11", Set.of(),
+            "v26_2", Set.of());
     private static final Map<String, Set<String>> PLUMBING = Map.of(
             "api", Set.of("", "event"),
             "core", Set.of("debug", "edit", "platform", "position"),
             "nms", Set.of("", "platform", "port"),
             "plugin", Set.of("", "config", "lifecycle"),
-            "v1_21_11", Set.of(""));
+            "v1_21_11", Set.of(""),
+            "v26_2", Set.of(""));
     private static final Set<String> COMPOSITION_ROOTS = Set.of("nms", "plugin");
     private static final Map<String, Pattern> HIGHER_MODULES = Map.of(
-            "api", Pattern.compile("tlm[.]dev[.]basalt[.](core|nms|plugin|v1_21_11)\\b"),
-            "core", Pattern.compile("tlm[.]dev[.]basalt[.](nms|plugin|v1_21_11)\\b"),
-            "nms", Pattern.compile("tlm[.]dev[.]basalt[.](plugin|v1_21_11)\\b"),
-            "v1_21_11", Pattern.compile("tlm[.]dev[.]basalt[.]plugin\\b"));
+            "api", Pattern.compile("tlm[.]dev[.]basalt[.](core|nms|plugin|v1_21_11|v26_2)\\b"),
+            "core", Pattern.compile("tlm[.]dev[.]basalt[.](nms|plugin|v1_21_11|v26_2)\\b"),
+            "nms", Pattern.compile("tlm[.]dev[.]basalt[.](plugin|v1_21_11|v26_2)\\b"),
+            "v1_21_11", Pattern.compile("tlm[.]dev[.]basalt[.](plugin|v26_2)\\b"),
+            "v26_2", Pattern.compile("tlm[.]dev[.]basalt[.](plugin|v1_21_11)\\b"));
     private static final Pattern WORK_MARKER = Pattern.compile("\\b(TO[D]O|FIX[M]E)\\b");
     private static final Pattern PUBLIC_TYPE = Pattern.compile(
             "\\bpublic\\s+(?:(?:static|final|abstract|sealed|non-sealed|strictfp)\\s+)*(?:class|interface|enum|record|@interface)\\s+(\\w+)");
